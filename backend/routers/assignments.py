@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from ..csv_store import get_scenarios, get_assignments_for_scenario, get_meter_names, upsert_assignment
+from ..csv_store import get_scenarios, get_assignments_for_scenario, upsert_assignment
 
 router = APIRouter()
 
@@ -40,8 +40,6 @@ def get_grid_assignments(scenario: str = "2026_04_23"):
 
 @router.put("/assignments/{meter_name}")
 def update_assignment(meter_name: str, body: AssignmentUpdate):
-    if meter_name not in get_meter_names():
-        raise HTTPException(status_code=404, detail="Meter not found")
     updated = upsert_assignment(meter_name, body.scenario, body.substation_meter)
     if updated is None:
         raise HTTPException(status_code=404, detail="Meter/scenario combination not found")

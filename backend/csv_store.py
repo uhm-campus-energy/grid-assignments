@@ -6,6 +6,8 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 CSV_FILE = "grid_assignments.csv"
 
 _lock = threading.Lock()
+_cache: tuple[list[str], list[list[str]]] | None = None
+_cache_mtime: float = 0.0
 
 # 0-based column indices for grid_assignments.csv
 # (duplicate column names are handled by using indices directly)
@@ -34,22 +36,33 @@ _MIN_COLS = 19
 
 
 def _read_all() -> tuple[list[str], list[list[str]]]:
+    global _cache, _cache_mtime
     path = DATA_DIR / CSV_FILE
     if not path.exists():
         return [], []
+    mtime = path.stat().st_mtime
+    if _cache is not None and mtime == _cache_mtime:
+        return _cache
     with open(path, newline="", encoding="utf-8") as f:
         rows = list(csv.reader(f))
     if not rows:
+        _cache = ([], [])
+        _cache_mtime = mtime
         return [], []
-    return rows[0], rows[1:]
+    _cache = (rows[0], rows[1:])
+    _cache_mtime = mtime
+    return _cache
 
 
 def _write_all(header: list[str], data_rows: list[list[str]]) -> None:
+    global _cache, _cache_mtime
     path = DATA_DIR / CSV_FILE
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(data_rows)
+    _cache = None
+    _cache_mtime = 0.0
 
 
 def _get(row: list[str], key: str) -> str:
