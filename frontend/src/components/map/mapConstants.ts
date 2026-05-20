@@ -1,9 +1,9 @@
 export const BUS_COLORS: Record<string, string> = {
-  MA: '#1565C0',
-  MB: '#2E7D32',
-  LA: '#00838F',
-  LB: '#C62828',
-  LC: '#6A1B9A',
+  MA: '#00BCD4',
+  MB: '#4CAF50',
+  LA: '#FF9800',
+  LB: '#F44336',
+  LC: '#9C27B0',
   Null: '#9E9E9E',
 };
 

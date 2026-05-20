@@ -31,11 +31,11 @@ export default function GridMap({
 
   const traces = BUS_OPTIONS.map((bus) => {
     const subset = data.filter((d) => (d.substation_meter ?? 'Null') === bus);
-    const baseSize = 11;
+    const baseSize = 18;
     const sizes = sizeBy
       ? subset.map((d) => {
           const val = d[sizeBy as keyof GridAssignment];
-          return typeof val === 'number' ? Math.max(8, Math.min(25, val / 5)) : baseSize;
+          return typeof val === 'number' ? Math.max(12, Math.min(32, val / 5)) : baseSize;
         })
       : subset.map(() => baseSize);
 
@@ -48,6 +48,7 @@ export default function GridMap({
       marker: {
         color: BUS_COLORS[bus],
         size: sizes,
+        opacity: 1,
         line: { color: 'white', width: 1.5 },
       },
       text: showLabels ? subset.map((d) => d.node) : undefined,
@@ -75,6 +76,7 @@ export default function GridMap({
     },
     hovermode: 'closest' as const,
     dragmode: false as const,
+    showlegend: false,
     margin: { l: 0, r: 0, t: 0, b: 0 },
     images: [
       {

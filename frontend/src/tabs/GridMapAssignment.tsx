@@ -3,6 +3,7 @@ import GridMap from '../components/map/GridMap';
 import { GridAssignment } from '../types/gridAssignment';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateAssignment } from '../api/gridMap';
+import { BUS_COLORS, BUS_OPTIONS } from '../components/map/mapConstants';
 
 interface GridMapAssignmentProps {
   data: GridAssignment[];
@@ -75,6 +76,27 @@ export default function GridMapAssignment({
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <div style={styles.sidebarTitle}>Bus Assignment</div>
+          {BUS_OPTIONS.map((bus) => (
+            <div key={bus} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  backgroundColor: BUS_COLORS[bus],
+                  marginRight: 8,
+                  flexShrink: 0,
+                  border: '1.5px solid rgba(0,0,0,0.15)',
+                }}
+              />
+              <span style={{ fontSize: 13, color: '#333' }}>{bus}</span>
+            </div>
+          ))}
         </div>
       </div>
       <div style={styles.mapContainer}>
