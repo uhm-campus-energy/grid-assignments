@@ -13,8 +13,7 @@ export function useGridData(scenario: string) {
   return useQuery({
     queryKey: ['grid-assignments', scenario],
     queryFn: () => fetchGridAssignments(scenario),
-    refetchInterval: 30_000,
-    staleTime: 25_000,
+    staleTime: Infinity,
   });
 }
 
