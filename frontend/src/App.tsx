@@ -7,8 +7,6 @@ import ListTab from './tabs/ListTab';
 import PvTab from './tabs/PvTab';
 import AvgKwTab from './tabs/AvgKwTab';
 import ITCenterTab from './tabs/ITCenterTab';
-import Sheet12Tab from './tabs/Sheet12Tab';
-
 const TAB_NAMES = [
   'Grid Map Assignment',
   'Low Load, High PV',
@@ -17,7 +15,6 @@ const TAB_NAMES = [
   'PV',
   "Avg kW New Year's Day",
   'IT Center',
-  'Sheet 12',
 ];
 
 export default function App() {
@@ -112,8 +109,6 @@ export default function App() {
         return <AvgKwTab data={gridData} />;
       case 6:
         return <ITCenterTab data={gridData} scenario={scenario} />;
-      case 7:
-        return <Sheet12Tab />;
       default:
         return null;
     }

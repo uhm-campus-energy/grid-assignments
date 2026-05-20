@@ -5,6 +5,9 @@ import { GridAssignment } from '../../types/gridAssignment';
 import { BUS_COLORS, BUS_OPTIONS } from './mapConstants';
 import ReassignPanel from './ReassignPanel';
 
+const IMG_X0 = 0, IMG_X1 = 15;
+const IMG_Y0 = 0, IMG_Y1 = 15;
+
 interface GridMapProps {
   data: GridAssignment[];
   scenario: string;
@@ -20,8 +23,8 @@ export default function GridMap({
   scenario,
   showLabels = false,
   sizeBy,
-  xRange = [0, 15],
-  yRange = [0, 15],
+  xRange = [IMG_X0, IMG_X1],
+  yRange = [IMG_Y0, IMG_Y1],
   onReassign,
 }: GridMapProps) {
   const [selectedMeter, setSelectedMeter] = useState<GridAssignment | null>(null);
@@ -56,22 +59,35 @@ export default function GridMap({
   });
 
   const layout = {
-    title: 'Grid Map Assignment',
-    xaxis: { range: xRange, showgrid: true },
-    yaxis: { range: yRange, showgrid: true },
+    xaxis: {
+      range: xRange,
+      showgrid: false,
+      showticklabels: false,
+      showline: false,
+      zeroline: false,
+    },
+    yaxis: {
+      range: yRange,
+      showgrid: false,
+      showticklabels: false,
+      showline: false,
+      zeroline: false,
+    },
     hovermode: 'closest' as const,
+    dragmode: false as const,
+    margin: { l: 0, r: 0, t: 0, b: 0 },
     images: [
       {
         source: '/grid_map.png',
         xref: 'x' as const,
         yref: 'y' as const,
-        x: xRange[0],
-        y: yRange[1],
-        sizex: xRange[1] - xRange[0],
-        sizey: yRange[1] - yRange[0],
+        x: IMG_X0,
+        y: IMG_Y1,
+        sizex: IMG_X1 - IMG_X0,
+        sizey: IMG_Y1 - IMG_Y0,
         xanchor: 'left' as const,
         yanchor: 'top' as const,
-        sizing: 'contain' as const,
+        sizing: 'stretch' as const,
         layer: 'below' as const,
         opacity: 1.0,
       },
