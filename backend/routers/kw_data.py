@@ -10,16 +10,11 @@ def get_kw_data_endpoint(
     load_scenario: Optional[str] = None,
     pv_scenario: Optional[str] = None,
 ):
-    rows = get_kw_data()
-    if load_scenario:
-        rows = [r for r in rows if r.get("load_scenario") == load_scenario]
-    if pv_scenario:
-        rows = [r for r in rows if r.get("pv_scenario") == pv_scenario]
-
+    rows = get_kw_data(load_scenario, pv_scenario)
     result = []
-    for i, r in enumerate(rows):
+    for r in rows:
         result.append({
-            "id": int(r["id"]) if r.get("id") else i + 1,
+            "id": r["id"],
             "datetime_str": r.get("datetime_str"),
             "load_scenario": r.get("load_scenario"),
             "meter_name": r.get("meter_name"),
