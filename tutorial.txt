@@ -1,0 +1,15 @@
+Open 2 terminal at once: 
+
+Terminal 1 — Backend (FastAPI):
+cd /Users/anhminh/Documents/GitHub/github/work/grid-assignments-test/backend
+uvicorn main:app --reload
+# or: python -m uvicorn main:app --reload
+Runs on http://localhost:8000
+
+
+Terminal 2 — Frontend (Vite):
+cd /Users/anhminh/Documents/GitHub/github/work/grid-assignments-test/frontend
+npm run dev
+Then open http://localhost:5173 in your browser.
+
+Both need to be running at the same time — the frontend calls the backend API.
