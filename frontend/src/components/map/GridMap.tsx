@@ -20,8 +20,8 @@ export default function GridMap({
   scenario,
   showLabels = false,
   sizeBy,
-  xRange = [0, 100],
-  yRange = [0, 100],
+  xRange = [0, 15],
+  yRange = [0, 15],
   onReassign,
 }: GridMapProps) {
   const [selectedMeter, setSelectedMeter] = useState<GridAssignment | null>(null);
