@@ -3,7 +3,7 @@ import GridMap from '../components/map/GridMap';
 import { GridAssignment } from '../types/gridAssignment';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateAssignment } from '../api/gridMap';
-import { BUS_COLORS, BUS_OPTIONS } from '../components/map/mapConstants';
+import { BUS_COLORS } from '../components/map/mapConstants';
 
 interface GridMapAssignmentProps {
   data: GridAssignment[];
@@ -80,7 +80,7 @@ export default function GridMapAssignment({
 
         <div>
           <div style={styles.sidebarTitle}>Bus Assignment</div>
-          {BUS_OPTIONS.map((bus) => (
+          {[...new Set(data.map((d) => d.substation_meter ?? 'Null'))].sort().map((bus) => (
             <div key={bus} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
               <span
                 style={{

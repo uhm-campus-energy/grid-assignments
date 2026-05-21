@@ -1,21 +1,9 @@
 import { useState } from 'react';
 import { useScenarios, useGridData } from './hooks/useGridData';
-import GridMapAssignment from './tabs/GridMapAssignment';
-import LowLoadHighPvTab from './tabs/LowLoadHighPvTab';
-import GridMapMeters from './tabs/GridMapMeters';
-import ListTab from './tabs/ListTab';
-import PvTab from './tabs/PvTab';
-import AvgKwTab from './tabs/AvgKwTab';
-import ITCenterTab from './tabs/ITCenterTab';
-const TAB_NAMES = [
-  'Grid Map Assignment',
-  'Low Load, High PV',
-  'Grid Map Meters',
-  'List',
-  'PV',
-  "Avg kW New Year's Day",
-  'IT Center',
-];
+import GridMapAssignment from './tabs/grid-map-assignment';
+import LowLoadHighPv from './tabs/low-load-high-pv';
+
+const TAB_NAMES = ['Grid Map Assignment', 'Low Load, High PV'];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState(0);
@@ -98,17 +86,7 @@ export default function App() {
           />
         );
       case 1:
-        return <LowLoadHighPvTab />;
-      case 2:
-        return <GridMapMeters data={gridData} scenario={scenario} />;
-      case 3:
-        return <ListTab data={gridData} />;
-      case 4:
-        return <PvTab />;
-      case 5:
-        return <AvgKwTab data={gridData} />;
-      case 6:
-        return <ITCenterTab data={gridData} scenario={scenario} />;
+        return <LowLoadHighPv data={gridData} />;
       default:
         return null;
     }

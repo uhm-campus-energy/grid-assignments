@@ -7,6 +7,7 @@ uvicorn backend.main:app --reload
 Terminal 2 (frontend):
 cd /Users/anhminh/Documents/GitHub/github/work/grid-assignments-test/frontend
 npm run dev
-Then open http://localhost:5173
+
+Then open http://localhost:5175
 
 Both need to be running at the same time — the frontend calls the backend API.
