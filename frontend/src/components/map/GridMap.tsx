@@ -117,7 +117,8 @@ export default function GridMap({
           height: undefined,
           autosize: true,
         }}
-        config={{ displayModeBar: false, scrollZoom: false }}
+        config={{ displayModeBar: false, scrollZoom: false, responsive: true }}
+        useResizeHandler={true}
         onClick={handlePlotClick}
         style={{ width: '100%', height: '100%' }}
       />

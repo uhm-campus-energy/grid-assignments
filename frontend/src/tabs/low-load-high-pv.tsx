@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import Plot from 'react-plotly.js';
 import { useKwData } from '../hooks/useKwData';
 import { GridAssignment } from '../types/gridAssignment';
@@ -12,6 +12,21 @@ interface Props {
 
 export default function LowLoadHighPv({ data, assignment, assignments, onAssignmentChange }: Props) {
   const { data: kwData = [], isLoading } = useKwData();
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [chartHeight, setChartHeight] = useState(300);
+
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(() => {
+      const rows = Math.ceil(substations.length / 2) || 1;
+      setChartHeight(Math.max(200, Math.floor(el.clientHeight / rows)));
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  // substations.length intentionally omitted — ref observation is enough
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredMeters = useMemo(() => {
     return new Set(data.filter((d) => d.assignment === assignment).map((d) => d.meter_name));
@@ -124,7 +139,7 @@ export default function LowLoadHighPv({ data, assignment, assignments, onAssignm
         </div>
       </div>
 
-      <div style={styles.grid}>
+      <div ref={gridRef} style={styles.grid}>
         {substations.map((sub) => {
           const times = Object.keys(substationSeries[sub]).sort();
           const demands = times.map((t) => substationSeries[sub][t].demand);
@@ -169,7 +184,8 @@ export default function LowLoadHighPv({ data, assignment, assignments, onAssignm
                 hovermode: 'x unified',
               }}
               config={{ displayModeBar: false, responsive: true }}
-              style={{ width: '100%', height: '300px' }}
+              useResizeHandler={true}
+              style={{ width: '100%', height: `${chartHeight}px` }}
             />
           );
         })}
