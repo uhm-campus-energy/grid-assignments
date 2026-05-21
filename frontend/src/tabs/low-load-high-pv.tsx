@@ -1,26 +1,21 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { useKwData } from '../hooks/useKwData';
 import { GridAssignment } from '../types/gridAssignment';
 
 interface Props {
   data: GridAssignment[];
+  assignment: string;
+  assignments: string[];
+  onAssignmentChange: (v: string) => void;
 }
 
-export default function LowLoadHighPv({ data }: Props) {
-  const [assignmentFilter, setAssignmentFilter] = useState('(All)');
+export default function LowLoadHighPv({ data, assignment, assignments, onAssignmentChange }: Props) {
   const { data: kwData = [], isLoading } = useKwData();
 
-  const assignments = useMemo(() => {
-    const vals = [...new Set(data.map((d) => d.assignment ?? 'Null'))].sort();
-    return ['(All)', ...vals];
-  }, [data]);
-
   const filteredMeters = useMemo(() => {
-    if (assignmentFilter === '(All)') return new Set(data.map((d) => d.meter_name));
-    const target = assignmentFilter === 'Null' ? null : assignmentFilter;
-    return new Set(data.filter((d) => (d.assignment ?? null) === target).map((d) => d.meter_name));
-  }, [data, assignmentFilter]);
+    return new Set(data.filter((d) => d.assignment === assignment).map((d) => d.meter_name));
+  }, [data, assignment]);
 
   const meterToSubstation = useMemo(() => {
     const map: Record<string, string> = {};
@@ -55,21 +50,35 @@ export default function LowLoadHighPv({ data }: Props) {
       overflowY: 'auto' as const,
       alignContent: 'start',
     },
-    panel: {
-      width: '220px',
+    sidebar: {
+      width: '250px',
       flexShrink: 0,
-      padding: '20px 16px',
-      borderLeft: '1px solid #ddd',
+      padding: '20px',
+      backgroundColor: '#f9f9f9',
+      borderRight: '1px solid #ddd',
       overflowY: 'auto' as const,
-      fontSize: '13px',
     },
-    panelTitle: { fontWeight: 600 as const, marginBottom: '8px', fontSize: '13px' },
+    sidebarTitle: {
+      fontSize: '14px',
+      fontWeight: '600' as const,
+      textTransform: 'uppercase' as const,
+      color: '#666',
+      marginBottom: '12px',
+    },
+    select: {
+      width: '100%',
+      padding: '8px',
+      fontSize: '14px',
+      border: '1px solid #ddd',
+      borderRadius: '4px',
+      fontFamily: 'inherit',
+    },
     legendSwatch: {
       display: 'inline-block',
       width: 14,
       height: 14,
       marginRight: 8,
-      verticalAlign: 'middle',
+      verticalAlign: 'middle' as const,
       flexShrink: 0,
     },
     note: { marginTop: '16px', fontSize: '12px', color: '#666', lineHeight: 1.5 },
@@ -85,6 +94,36 @@ export default function LowLoadHighPv({ data }: Props) {
 
   return (
     <div style={styles.container}>
+      <div style={styles.sidebar}>
+        <div style={{ marginBottom: '20px' }}>
+          <div style={styles.sidebarTitle}>Assignments</div>
+          <select
+            value={assignment}
+            onChange={(e) => onAssignmentChange(e.target.value)}
+            style={styles.select}
+          >
+            {assignments.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <div style={styles.sidebarTitle}>Measure Names</div>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ ...styles.legendSwatch, backgroundColor: '#5B9BD5', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,0.15)' }} />
+            <span style={{ fontSize: 13, color: '#333' }}>Demand KW</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ ...styles.legendSwatch, backgroundColor: '#ED7D31', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,0.15)' }} />
+            <span style={{ fontSize: 13, color: '#333' }}>PV Production kW</span>
+          </div>
+        </div>
+
+        <div style={styles.note}>
+          The low load for buildings was taken from 1/1/26.<br />
+          The PV was modelled after parking phase 2 on 5/14/22 - a maximum production day.
+        </div>
+      </div>
+
       <div style={styles.grid}>
         {substations.map((sub) => {
           const times = Object.keys(substationSeries[sub]).sort();
@@ -136,36 +175,6 @@ export default function LowLoadHighPv({ data }: Props) {
         })}
       </div>
 
-      <div style={styles.panel}>
-        <div style={styles.panelTitle}>Assignment</div>
-        {assignments.map((a) => (
-          <label key={a} style={{ display: 'block', marginBottom: '6px', cursor: 'pointer' }}>
-            <input
-              type="radio"
-              value={a}
-              checked={assignmentFilter === a}
-              onChange={() => setAssignmentFilter(a)}
-              style={{ marginRight: '6px' }}
-            />
-            {a}
-          </label>
-        ))}
-
-        <div style={{ ...styles.panelTitle, marginTop: '20px' }}>Measure Names</div>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
-          <span style={{ ...styles.legendSwatch, backgroundColor: '#5B9BD5' }} />
-          Demand KW
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span style={{ ...styles.legendSwatch, backgroundColor: '#ED7D31' }} />
-          PV Production kW
-        </div>
-
-        <div style={styles.note}>
-          The low load for buildings was taken from 1/1/26.<br />
-          The PV was modelled after parking phase 2 on 5/14/22 - a maximum production day.
-        </div>
-      </div>
     </div>
   );
 }

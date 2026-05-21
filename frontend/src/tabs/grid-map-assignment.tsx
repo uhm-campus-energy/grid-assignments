@@ -37,7 +37,7 @@ export default function GridMapAssignment({
       width: '250px',
       padding: '20px',
       backgroundColor: '#f9f9f9',
-      borderRight: '1px solid #ddd',
+      borderLeft: '1px solid #ddd',
       overflowY: 'auto' as const,
     },
     sidebarTitle: {
@@ -64,7 +64,7 @@ export default function GridMapAssignment({
     <div style={styles.container}>
       <div style={styles.sidebar}>
         <div style={{ marginBottom: '20px' }}>
-          <label style={styles.sidebarTitle}>Scenario</label>
+          <label style={styles.sidebarTitle}>Assignments</label>
           <select
             value={scenario}
             onChange={(e) => onScenarioChange(e.target.value)}

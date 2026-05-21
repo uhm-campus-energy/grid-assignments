@@ -86,7 +86,14 @@ export default function App() {
           />
         );
       case 1:
-        return <LowLoadHighPv data={gridData} />;
+        return (
+          <LowLoadHighPv
+            data={gridData}
+            assignment={scenario}
+            assignments={scenarios}
+            onAssignmentChange={setScenario}
+          />
+        );
       default:
         return null;
     }
