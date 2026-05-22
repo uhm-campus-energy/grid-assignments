@@ -182,6 +182,7 @@ export default function LowLoadHighPv({ data, assignment, assignments, onAssignm
                 autosize: true,
                 margin: { t: 40, r: 60, b: 50, l: 60 },
                 hovermode: 'x unified',
+                hoverlabel: { namelength: -1, font: { size: 13 } },
               }}
               config={{ displayModeBar: false, responsive: true }}
               useResizeHandler={true}

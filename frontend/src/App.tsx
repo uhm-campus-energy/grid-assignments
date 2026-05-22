@@ -7,7 +7,7 @@ const TAB_NAMES = ['Grid Map Assignment', 'Low Load, High PV'];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState(0);
-  const [scenario, setScenario] = useState('2026_04_23');
+  const [scenario, setScenario] = useState('2026_04_11');
 
   const { data: scenarios = [] } = useScenarios();
   const { data: gridData = [], isLoading: dataLoading } = useGridData(scenario);
@@ -28,7 +28,7 @@ export default function App() {
     },
     title: {
       margin: 0,
-      fontSize: '24px',
+      fontSize: '36px',
       fontWeight: 'bold',
     },
     tabBar: {
@@ -42,19 +42,17 @@ export default function App() {
       border: 'none',
       backgroundColor: 'transparent',
       cursor: 'pointer',
-      fontSize: '14px',
+      fontSize: '24px',
       whiteSpace: 'nowrap' as const,
-      borderBottom: '3px solid transparent',
-      transition: 'all 0.2s',
       fontFamily: 'inherit',
     },
     activeTab: {
-      borderBottomColor: '#1565C0',
       color: '#1565C0',
       fontWeight: '600' as const,
     },
     inactiveTab: {
       color: '#666',
+      fontWeight: 'normal' as const,
     },
     content: {
       flex: 1,
