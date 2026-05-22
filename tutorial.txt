@@ -1,8 +1,9 @@
-Open 2 terminal at once: 
+Open 2 terminals at once:
 
 Terminal 1 (backend):
 cd /Users/anhminh/Documents/GitHub/github/work/grid-assignments-test
-uvicorn backend.main:app --reload
+uvicorn backend.main:app --reload 
+
 
 Terminal 2 (frontend):
 cd /Users/anhminh/Documents/GitHub/github/work/grid-assignments-test/frontend
