@@ -132,7 +132,7 @@ export default function LowLoadHighPv({ data, assignment, assignments, onAssignm
     <div style={styles.container}>
       <div style={styles.sidebar}>
         <div style={{ marginBottom: '20px' }}>
-          <div style={styles.sidebarTitle}>Assignments</div>
+          <div style={styles.sidebarTitle}>Assignment</div>
           <select
             value={assignment}
             onChange={(e) => onAssignmentChange(e.target.value)}

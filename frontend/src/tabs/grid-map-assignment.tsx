@@ -64,7 +64,7 @@ export default function GridMapAssignment({
     <div style={styles.container}>
       <div style={styles.sidebar}>
         <div style={{ marginBottom: '20px' }}>
-          <label style={styles.sidebarTitle}>Assignments</label>
+          <label style={styles.sidebarTitle}>Assignment</label>
           <select
             value={scenario}
             onChange={(e) => onScenarioChange(e.target.value)}
@@ -79,7 +79,7 @@ export default function GridMapAssignment({
         </div>
 
         <div>
-          <div style={styles.sidebarTitle}>Bus Assignment</div>
+          <div style={styles.sidebarTitle}>Substation Meter</div>
           {[...new Set(data.map((d) => d.substation_meter ?? 'Null'))].sort().map((bus) => (
             <div key={bus} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
               <span

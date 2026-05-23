@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { GridAssignment } from '../../types/gridAssignment';
 import { BUS_OPTIONS } from './mapConstants';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateAssignment } from '../../api/gridMap';
+import { useKwData } from '../../hooks/useKwData';
+
+const fmtKw = (v: number | null) =>
+  v == null ? '—' : `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} kW`;
 
 interface ReassignPanelProps {
   meter: GridAssignment;
@@ -19,6 +23,19 @@ export default function ReassignPanel({
 }: ReassignPanelProps) {
   const [selected, setSelected] = useState<string>(meter.substation_meter ?? 'Null');
   const queryClient = useQueryClient();
+  const { data: kwData = [], isLoading: kwLoading } = useKwData();
+
+  // PV has no precomputed 10am–2pm average (only demand's avg_kw_10_to_2 exists),
+  // so derive it from this meter's time series over the same 10:00–14:00 window.
+  const avgPv10to2 = useMemo(() => {
+    const inWindow = kwData.filter((d) => {
+      if (d.meter_name !== meter.meter_name) return false;
+      const hour = parseInt((d.datetime_str.split(' ')[1] ?? '').slice(0, 2), 10);
+      return hour >= 10 && hour < 14;
+    });
+    if (inWindow.length === 0) return null;
+    return inWindow.reduce((s, d) => s + (d.pv_production_kw || 0), 0) / inWindow.length;
+  }, [kwData, meter.meter_name]);
 
   const mutation = useMutation({
     mutationFn: (bus: string) =>
@@ -125,6 +142,16 @@ export default function ReassignPanel({
           <div style={styles.field}>
             <label style={styles.label}>Current Substation Meter</label>
             <div style={styles.value}>{meter.substation_meter ?? 'Null'}</div>
+          </div>
+
+          <div style={styles.field}>
+            <label style={styles.label}>Avg Demand (10am–2pm)</label>
+            <div style={styles.value}>{fmtKw(meter.avg_kw_10_to_2)}</div>
+          </div>
+
+          <div style={styles.field}>
+            <label style={styles.label}>Avg PV Production (10am–2pm)</label>
+            <div style={styles.value}>{kwLoading ? 'Loading…' : fmtKw(avgPv10to2)}</div>
           </div>
 
           <div style={styles.field}>

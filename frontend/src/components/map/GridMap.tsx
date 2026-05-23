@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
 import { PlotMouseEvent } from 'plotly.js';
 import { GridAssignment } from '../../types/gridAssignment';
 import { BUS_COLORS, BUS_OPTIONS } from './mapConstants';
+import { useKwData } from '../../hooks/useKwData';
 import ReassignPanel from './ReassignPanel';
 
 const IMG_X0 = 0, IMG_X1 = 15;
 const IMG_Y0 = 0, IMG_Y1 = 15;
+
+const fmtKw = (v: number | null | undefined) =>
+  v == null ? '—' : `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} kW`;
 
 interface GridMapProps {
   data: GridAssignment[];
@@ -28,6 +32,23 @@ export default function GridMap({
   onReassign,
 }: GridMapProps) {
   const [selectedMeter, setSelectedMeter] = useState<GridAssignment | null>(null);
+  const { data: kwData = [] } = useKwData();
+
+  // Average PV production per meter over the 10:00–14:00 window, to mirror the
+  // demand's precomputed avg_kw_10_to_2 (PV has no equivalent precomputed field).
+  const avgPvByMeter = useMemo(() => {
+    const acc: Record<string, { sum: number; count: number }> = {};
+    kwData.forEach((d) => {
+      const hour = parseInt((d.datetime_str.split(' ')[1] ?? '').slice(0, 2), 10);
+      if (hour < 10 || hour >= 14) return;
+      if (!acc[d.meter_name]) acc[d.meter_name] = { sum: 0, count: 0 };
+      acc[d.meter_name].sum += d.pv_production_kw || 0;
+      acc[d.meter_name].count += 1;
+    });
+    const map: Record<string, number> = {};
+    Object.entries(acc).forEach(([m, { sum, count }]) => { map[m] = count ? sum / count : 0; });
+    return map;
+  }, [kwData]);
 
   const traces = BUS_OPTIONS.map((bus) => {
     const subset = data.filter((d) => (d.substation_meter ?? 'Null') === bus);
@@ -54,8 +75,20 @@ export default function GridMap({
       text: showLabels ? subset.map((d) => d.node) : undefined,
       textposition: (showLabels ? 'top center' : undefined) as 'top center' | undefined,
       textfont: { size: 9, color: '#000' },
-      customdata: subset.map((d) => [d.meter_name, d.substation_meter, d.circuit]),
-      hovertemplate: '<b>%{customdata[0]}</b><br>Bus: ' + bus + '<br>Circuit: %{customdata[2]}<extra></extra>',
+      customdata: subset.map((d) => [
+        d.meter_name,
+        d.substation_meter,
+        d.circuit,
+        fmtKw(d.avg_kw_10_to_2),
+        fmtKw(avgPvByMeter[d.meter_name]),
+      ]),
+      hovertemplate:
+        '<b>%{customdata[0]}</b><br>' +
+        'Substation Meter: ' + bus + '<br>' +
+        'Circuit: %{customdata[2]}<br>' +
+        'Avg Demand (10am–2pm): %{customdata[3]}<br>' +
+        'Avg PV Production (10am–2pm): %{customdata[4]}' +
+        '<extra></extra>',
     };
   });
 
