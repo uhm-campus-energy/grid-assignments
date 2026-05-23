@@ -1,11 +1,16 @@
 Open 2 terminals at once:
 
 Terminal 1 (backend):
+source /Users/anhminh/Documents/GitHub/github/work/grid-assignments-test/.venv/bin/activate
 cd /Users/anhminh/Documents/GitHub/github/work/grid-assignments-test
-uvicorn backend.main:app --reload 
+uvicorn backend.main:app --reload --reload-dir backend
+
+
+# --reload-dir backend: only watch backend code. Without it, reload also watches data/, so saving a bus reassignment (which writes the big CSV) restarts the server mid-request and the change never reaches the UI.
 
 
 Terminal 2 (frontend):
+source /Users/anhminh/Documents/GitHub/github/work/grid-assignments-test/.venv/bin/activate
 cd /Users/anhminh/Documents/GitHub/github/work/grid-assignments-test/frontend
 npm run dev
 
