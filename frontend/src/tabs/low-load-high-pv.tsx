@@ -10,10 +10,31 @@ interface Props {
   onAssignmentChange: (v: string) => void;
 }
 
+// A point pinned by clicking a circuit chart; cleared by clicking it again.
+type PinnedPoint = { x: string; demand: number; pv: number };
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Format a raw "2026-1-1 11:45:00" datetime string as "Jan 1, 2026, 11:45"
+// to match the unified-hover label. Parsed manually to avoid timezone shifts.
+function formatPinnedDate(s: string): string {
+  const [datePart, timePart = ''] = s.split(' ');
+  const [y, m, d] = datePart.split('-').map(Number);
+  const [hh = '00', mm = '00'] = timePart.split(':');
+  return `${MONTHS[(m || 1) - 1]} ${d}, ${y}, ${hh}:${mm}`;
+}
+
+const fmtKw = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 3 });
+
 export default function LowLoadHighPv({ data, assignment, assignments, onAssignmentChange }: Props) {
   const { data: kwData = [], isLoading } = useKwData();
   const gridRef = useRef<HTMLDivElement>(null);
   const [chartHeight, setChartHeight] = useState(300);
+
+  // Pinned tooltip per circuit (keyed by substation). Reset when the
+  // assignment changes, since the underlying time series changes too.
+  const [pinned, setPinned] = useState<Record<string, PinnedPoint | null>>({});
+  useEffect(() => { setPinned({}); }, [assignment]);
 
   useEffect(() => {
     const el = gridRef.current;
@@ -145,9 +166,26 @@ export default function LowLoadHighPv({ data, assignment, assignments, onAssignm
           const demands = times.map((t) => substationSeries[sub][t].demand);
           const pvs = times.map((t) => substationSeries[sub][t].pv);
 
+          const pin = pinned[sub] ?? null;
+          const pinIdx = pin ? times.indexOf(pin.x) : -1;
+          // Keep the pinned label inside the plot near the right edge.
+          const pinOnRight = pinIdx > times.length * 0.6;
+
           return (
             <Plot
               key={sub}
+              onClick={(ev) => {
+                const pt = ev.points?.[0] as { pointNumber?: number; pointIndex?: number } | undefined;
+                const idx = pt?.pointNumber ?? pt?.pointIndex;
+                if (idx == null || idx < 0) return;
+                const x = times[idx];
+                setPinned((prev) => {
+                  const cur = prev[sub];
+                  // Click the same point again to dismiss; otherwise move the pin.
+                  if (cur && cur.x === x) return { ...prev, [sub]: null };
+                  return { ...prev, [sub]: { x, demand: demands[idx], pv: pvs[idx] } };
+                });
+              }}
               data={[
                 {
                   type: 'scatter',
@@ -170,19 +208,44 @@ export default function LowLoadHighPv({ data, assignment, assignments, onAssignm
                   name: 'PV Production kW',
                   line: { color: '#ED7D31', width: 1 },
                   fillcolor: 'rgba(237,125,49,0.65)',
-                  yaxis: 'y2',
+                  yaxis: 'y',
                   showlegend: false,
                 },
               ]}
               layout={{
                 title: { text: `Circuit ${sub}`, font: { size: 14 } },
-                xaxis: { title: 'Time' },
-                yaxis: { title: 'Demand KW', rangemode: 'tozero' },
-                yaxis2: { title: 'PV Production kW', overlaying: 'y', side: 'right', rangemode: 'tozero' },
+                xaxis: { title: 'Time', fixedrange: true },
+                // Both series share one fixed scale so PV (kW) reads correctly
+                // below Demand (kW), and all circuits are directly comparable.
+                yaxis: { title: 'kW', range: [0, 3000], fixedrange: true },
+                dragmode: false,
                 autosize: true,
-                margin: { t: 40, r: 60, b: 50, l: 60 },
+                margin: { t: 40, r: 20, b: 50, l: 60 },
                 hovermode: 'x unified',
                 hoverlabel: { namelength: -1, font: { size: 13 } },
+                shapes: pin ? [{
+                  type: 'line',
+                  x0: pin.x, x1: pin.x, xref: 'x',
+                  y0: 0, y1: 1, yref: 'paper',
+                  line: { color: '#888', width: 1, dash: 'dot' },
+                }] : [],
+                annotations: pin ? [{
+                  x: pin.x, xref: 'x',
+                  y: 1, yref: 'paper',
+                  xanchor: pinOnRight ? 'right' : 'left',
+                  yanchor: 'top',
+                  text:
+                    `${formatPinnedDate(pin.x)}<br>` +
+                    `<span style="color:#5B9BD5">●</span> Demand KW : ${fmtKw(pin.demand)}<br>` +
+                    `<span style="color:#ED7D31">●</span> PV Production kW : ${fmtKw(pin.pv)}`,
+                  showarrow: false,
+                  align: 'left',
+                  bgcolor: 'rgba(255,255,255,0.95)',
+                  bordercolor: '#999',
+                  borderwidth: 1,
+                  borderpad: 6,
+                  font: { size: 12 },
+                }] : [],
               }}
               config={{ displayModeBar: false, responsive: true }}
               useResizeHandler={true}
