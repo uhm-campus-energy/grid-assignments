@@ -22,7 +22,7 @@ npm install
 cd ..
 ```
 
-> If you're running off the CSV (the default), put the extracted CSV file —
+> If you're running off the CSV (the default), put the extracted CSV file name it grid_assignments.csv —
 > from the database query that joins `grid_assignments_view` with
 > `grid_kw_low_load_high_pv` on `meter_name` — at `data/grid_assignments.csv`.
 > To read live from the database instead, see
