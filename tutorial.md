@@ -88,7 +88,7 @@ plain `DATABASE_URL` pointing at port 5432 will never connect.
 
    ```
    DATA_BACKEND=db
-   DATABASE_URL=postgresql://anhminh:PASSWORD@localhost:6543/uhm2023
+   DATABASE_URL=postgresql://username:PASSWORD@localhost:6543/uhm2023
    ```
 
    Notes: the schema does **not** go in the URL (queries already reference
