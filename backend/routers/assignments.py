@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from ..csv_store import get_scenarios, get_assignments_for_scenario, upsert_assignment
+from ..store import get_scenarios, get_assignments_for_scenario, upsert_assignment
 
 router = APIRouter()
 
