@@ -15,7 +15,7 @@ frontend/.env.local
 frontend/.env.production
 
 # CSV Data (sensitive operational data — distribute separately)
-grid_assignments.csv
+# grid_assignments.csv
 
 # macOS
 .DS_Store
