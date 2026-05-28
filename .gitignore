@@ -14,6 +14,13 @@ frontend/.env
 frontend/.env.local
 frontend/.env.production
 
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+
+# Vercel
+.vercel/
+
 # CSV Data (sensitive operational data — distribute separately)
 # grid_assignments.csv
 
