@@ -3,3 +3,4 @@ uvicorn[standard]==0.47.0
 pydantic==2.13.4
 psycopg[binary,pool]==3.2.*
 python-dotenv==1.2.2
+requests>=2.31,<3

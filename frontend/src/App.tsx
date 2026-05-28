@@ -29,7 +29,7 @@ export default function App() {
     title: {
       margin: 0,
       fontSize: '36px',
-      fontWeight: 'bold',
+      fontWeight: 'bold' as const,
     },
     tabBar: {
       display: 'flex',
