@@ -101,23 +101,41 @@ Each of these is a long-running process — use a separate terminal for steps 2�
 and leave them open.
 
 1. **Connect to the UH VPN.** Nothing below reaches the database without it.
-2. **Open the SSH tunnel** (forwards local port 6543 to Postgres on `csbcd01`):
+
+2. **Open the SSH tunnel** (forwards local port 6543 to Postgres on `csbcd01`).
+   Replace `YOUR_UH_USERNAME` with your own UH login — the host
+   (`128.171.46.101`, i.e. `csbcd01`) is the same for everyone:
 
    ```bash
-   ssh -N -L 6543:localhost:5432 anhminh@128.171.46.101
+   ssh -L 6543:localhost:5432 YOUR_UH_USERNAME@128.171.46.101
    ```
 
-   Verify from another terminal: `nc -z localhost 6543 && echo UP`.
-   (Tip: add `-f` — `ssh -fN -L ...` — to background it; stop later with
-   `pkill -f '6543:localhost:5432'`.)
+
+   Once you are logged in the server, open up a new **local** terminal and run:
+
+   ```bash
+   nc -z localhost 6543 && echo UP
+   ```
+   If you see UP, the tunnel is working and you can start the backend. The SSH terminal just needs to stay open in the background
+
 3. **Start the backend** and confirm it's hitting the DB:
 
    ```bash
    source .venv/bin/activate
    uvicorn backend.main:app --reload --reload-dir backend
-   curl http://localhost:8000/api/health     # -> {"status":"ok","db":"db"}
    ```
-4. **Start the frontend** (`cd frontend && npm run dev`) and open
+
+   Can check in the **local** terminal window to confirm the backend is hitting the database
+   ```bash
+    curl http://localhost:8000/api/health
+   ``` 
+   You should see {"status":"ok","db":"db"}
+
+4. **Start the frontend** 
+   ```bash
+   cd frontend && npm run dev`
+   ``` 
+ and open
    <http://localhost:5173>.
 
 To stop: `Ctrl+C` the frontend, then the backend, then the tunnel last.
@@ -130,8 +148,14 @@ Reads come from the `analysis.grid_assignments_view` and
 your DB login needs `UPDATE` permission there. To go back to the CSV, set
 `DATA_BACKEND=csv` (or remove it) and restart.
 
-- **App hangs ~30s then errors** → the SSH tunnel (or VPN) dropped. Reconnect the
-  VPN if needed, then restart the tunnel.
+- **Backend starts cleanly but every request errors with `connection to server
+  at "127.0.0.1", port 6543 ... Connection refused`** → the SSH tunnel was never
+  opened (or the VPN isn't connected). The backend boots fine with no database, so
+  an `Application startup complete` log does **not** mean the DB is reachable.
+  Connect the VPN, open the tunnel (step 2), confirm `nc -z localhost 6543 && echo
+  UP`, then restart the backend. (This is the most common first-run mistake.)
+- **App hangs ~30s then errors** → the SSH tunnel (or VPN) dropped mid-session.
+  Reconnect the VPN if needed, then restart the tunnel.
 - **`/api/health` says `"csv"`** → `.env` wasn't read; ensure `DATA_BACKEND=db`
   and that you started uvicorn from the project root.
 - **Reads work but Save fails** → your DB login lacks `UPDATE` on
