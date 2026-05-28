@@ -3,10 +3,6 @@ import { defineConfig, devices } from '@playwright/test';
 const BACKEND_PORT = 8000;
 const FRONTEND_PORT = 4173;
 
-// E2E test credentials — must match the env passed to the backend webServer below.
-export const TEST_USER = 'testuser';
-export const TEST_PASS = 'testpass';
-
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
@@ -27,7 +23,6 @@ export default defineConfig({
       command:
         'cp data/grid_assignments.csv /tmp/grid_e2e.csv && ' +
         `DATA_BACKEND=csv GRID_CSV_PATH=/tmp/grid_e2e.csv ` +
-        `APP_USERNAME=${TEST_USER} APP_PASSWORD=${TEST_PASS} AUTH_SECRET=e2e-secret ` +
         `.venv/bin/uvicorn backend.main:app --port ${BACKEND_PORT}`,
       cwd: '..',
       port: BACKEND_PORT,

@@ -3,8 +3,7 @@
 The app deploys as one Vercel project: the **React frontend** is served as a
 static build and the **FastAPI backend** runs as a Python serverless function
 under `/api`. The grid CSV lives in **Vercel Blob** so reassignments are durable
-and shared — a change one viewer makes is seen by the next. A shared
-username/password gates both the UI and the data API.
+and shared — a change one viewer makes is seen by the next.
 
 ```
 Browser ──► Vercel (static frontend  ──/api──►  Python function = FastAPI)
@@ -22,15 +21,18 @@ Browser ──► Vercel (static frontend  ──/api──►  Python function 
    vercel link          # link this folder to a Vercel project
    ```
 
-2. **Create a Blob store** — Vercel dashboard → your project → **Storage** →
-   **Create** → **Blob**. Copy its `BLOB_READ_WRITE_TOKEN` (Storage → `.env.local`
-   tab), or pull it locally with `vercel env pull`.
+2. **Create a Blob store** — Vercel dashboard → **Storage** → **Create** →
+   **Blob**. **Use Public access** (the Python REST API can't upload to a
+   private store). Connect the store to your project and tick
+   "Add a read-write token env var to this connection" so
+   `BLOB_READ_WRITE_TOKEN` lands in the project's env vars.
 
 3. **Seed the CSV into Blob** (uploads `data/grid_assignments.csv`):
    ```bash
-   BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxx .venv/bin/python scripts/seed_blob.py
+   .venv/bin/python scripts/seed_blob.py
    ```
-   Note the **Blob URL** it prints — that's your `BLOB_CSV_URL`.
+   The token is read from your local `.env` (set `BLOB_READ_WRITE_TOKEN=...`
+   there). The script verifies the round-trip and prints the blob URL.
 
 4. **Set Environment Variables** (dashboard → Settings → Environment Variables,
    or `vercel env add NAME`):
@@ -38,11 +40,10 @@ Browser ──► Vercel (static frontend  ──/api──►  Python function 
    | Variable | Value |
    |---|---|
    | `DATA_BACKEND` | `blob` |
-   | `BLOB_READ_WRITE_TOKEN` | the token from step 2 (auto-added if Blob store is linked) |
-   | `BLOB_CSV_URL` | the URL printed in step 3 |
-   | `APP_USERNAME` | your chosen login username |
-   | `APP_PASSWORD` | your chosen login password |
-   | `AUTH_SECRET` | a long random string: `python -c "import secrets; print(secrets.token_hex(32))"` |
+   | `BLOB_READ_WRITE_TOKEN` | auto-injected when the Blob store is connected to the project (or add it by hand with "Sensitive" checked) |
+
+   `BLOB_CSV_URL` is **not required** — the backend discovers the newest blob
+   via the Vercel Blob `list` API.
 
 ## Deploy
 
@@ -55,8 +56,7 @@ vercel --prod   # production deployment
 ## Verify the live deployment
 
 - `GET https://<app>.vercel.app/api/health` → `{"status":"ok","db":"blob"}`
-- `GET .../api/grid-assignments?scenario=2026_04_11` **without** a token → `401`
-- Open the site → log in with `APP_USERNAME` / `APP_PASSWORD` → both tabs load.
+- Open the site → both tabs load, scenarios populate, charts render.
 - Reassign a meter, reload in a **different** browser/session → the change is
   still there (durable + shared via Blob).
 
@@ -64,10 +64,12 @@ vercel --prod   # production deployment
 
 - **Local dev is unchanged:** `DATA_BACKEND=csv` reads/writes the on-disk CSV.
   Only Vercel uses `blob`.
-- **Consistency:** each function instance caches the parsed CSV and re-downloads
-  only when the blob's etag changes, so writes propagate to other viewers.
-  Concurrent writes are **last-write-wins** (fine for a demo).
+- **Consistency:** each write creates a **new immutable blob** (random suffix),
+  and reads discover the newest via `list`. Unique URLs are never CDN-stale, so
+  the next viewer always sees a write. Old versions are deleted best-effort.
+  Concurrent writes are last-write-wins.
 - **Data exposure:** the Blob is public-readable by URL (the data is OK to
-  share). The login protects the app and API; it does not lock the raw Blob URL.
+  share). If you want only invited viewers to see the app itself, enable
+  Vercel's **Deployment Protection** (Settings → Deployment Protection).
 - The 6.4 MB CSV is **not** bundled into the deploy (`.vercelignore` excludes
   `data/`); the function reads it from Blob.

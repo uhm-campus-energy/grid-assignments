@@ -1,30 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useScenarios, useGridData } from './hooks/useGridData';
 import GridMapAssignment from './tabs/grid-map-assignment';
 import LowLoadHighPv from './tabs/low-load-high-pv';
-import LoginPage from './components/LoginPage';
-import { getToken, clearToken, LOGOUT_EVENT } from './auth';
 
 const TAB_NAMES = ['Grid Map Assignment', 'Low Load, High PV'];
 
 export default function App() {
-  const [token, setTokenState] = useState<string | null>(getToken());
-
-  // A 401 anywhere clears the token (see api/client.ts) and fires LOGOUT_EVENT;
-  // reflect that here so we drop back to the login page.
-  useEffect(() => {
-    const onLogout = () => setTokenState(null);
-    window.addEventListener(LOGOUT_EVENT, onLogout);
-    return () => window.removeEventListener(LOGOUT_EVENT, onLogout);
-  }, []);
-
-  if (!token) {
-    return <LoginPage onSuccess={() => setTokenState(getToken())} />;
-  }
-  return <AuthedApp onLogout={() => clearToken()} />;
-}
-
-function AuthedApp({ onLogout }: { onLogout: () => void }) {
   const [activeTab, setActiveTab] = useState(0);
   const [scenario, setScenario] = useState('2026_04_11');
 
@@ -40,9 +21,6 @@ function AuthedApp({ onLogout }: { onLogout: () => void }) {
       backgroundColor: '#fff',
     },
     header: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
       padding: '16px',
       backgroundColor: '#1565C0',
       color: '#fff',
@@ -52,16 +30,6 @@ function AuthedApp({ onLogout }: { onLogout: () => void }) {
       margin: 0,
       fontSize: '36px',
       fontWeight: 'bold' as const,
-    },
-    logout: {
-      padding: '8px 16px',
-      fontSize: '14px',
-      color: '#1565C0',
-      backgroundColor: '#fff',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      fontFamily: 'inherit',
     },
     tabBar: {
       display: 'flex',
@@ -133,9 +101,6 @@ function AuthedApp({ onLogout }: { onLogout: () => void }) {
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>Grid Assignments</h1>
-        <button style={styles.logout} onClick={onLogout} data-testid="logout">
-          Log out
-        </button>
       </div>
 
       <div style={styles.tabBar}>
