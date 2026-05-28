@@ -135,7 +135,7 @@ and leave them open.
    ```bash
    cd frontend && npm run dev`
    ``` 
- and open
+   and open
    <http://localhost:5173>.
 
 To stop: `Ctrl+C` the frontend, then the backend, then the tunnel last.
