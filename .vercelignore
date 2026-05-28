@@ -1,0 +1,21 @@
+# Secrets — set these as Environment Variables in the Vercel dashboard instead.
+.env
+.env.*
+frontend/.env
+frontend/.env.*
+
+# Data lives in Vercel Blob (seeded separately), not in the deployment bundle.
+data/
+
+# Local / build / dev artifacts (regenerated or unneeded in the deploy)
+.venv/
+__pycache__/
+*.pyc
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+e2e/
+.vercel/
+.claude/
+.DS_Store
