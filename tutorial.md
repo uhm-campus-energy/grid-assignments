@@ -4,6 +4,12 @@ All commands below are run from the **project root** (the folder containing
 `backend/`, `frontend/`, `requirements.txt`). Paths are relative on purpose so
 this tutorial doesn't break if the repo is moved or renamed.
 
+> **No Vercel access needed.**
+> Vercel is only used for the shared production deployment. To run the app
+> yourself you only need Python 3, Node, and either the CSV data file or UH
+> network access for the live database. Everything below runs entirely on your
+> own machine.
+
 ## One-time setup
 
 **Backend** (Python virtual environment):
@@ -22,11 +28,14 @@ npm install
 cd ..
 ```
 
-> If you're running off the CSV (the default), put the extracted CSV file name it grid_assignments.csv —
-> from the database query that joins `grid_assignments_view` with
-> `grid_kw_low_load_high_pv` on `meter_name` — at `data/grid_assignments.csv`.
-> To read live from the database instead, see
-> [Using the live database](#using-the-live-database-instead-of-the-csv-optional).
+**Get the data file.**
+The CSV is not in the repository (it contains operational data). Ask a team
+member for `grid_assignments.csv` and place it at `data/grid_assignments.csv`
+relative to the project root. This is the default data source — no additional
+configuration required.
+
+If you want to read from the live database instead, see
+[Using the live database](#using-the-live-database-instead-of-the-csv-optional).
 
 ## Running the app (two terminals at once)
 
@@ -38,7 +47,7 @@ uvicorn backend.main:app --reload --reload-dir backend
 ```
 
 `--reload-dir backend` only watches backend code. Without it, reload also
-watches `data/`, so saving a bus reassignment (which writes the big CSV)
+watches `data/`, so saving a bus reassignment (which rewrites the CSV)
 restarts the server mid-request and the change never reaches the UI.
 
 Backend runs at <http://localhost:8000>.
@@ -71,13 +80,7 @@ plain `DATABASE_URL` pointing at port 5432 will never connect.
 
 ### One-time configuration
 
-1. Reinstall deps once to pull in the Postgres driver:
-
-   ```bash
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
-2. From the project root, copy the example env file and edit it:
+1. From the project root, copy the example env file and edit it:
 
    ```bash
    cp .env.example .env
@@ -95,7 +98,7 @@ plain `DATABASE_URL` pointing at port 5432 will never connect.
    `analysis.*` explicitly); URL-encode any special characters in the password
    (e.g. `@` → `%40`).
 
-### Every time you run the app
+### Every time you run the app with the live database
 
 Each of these is a long-running process — use a separate terminal for steps 2–4
 and leave them open.
@@ -110,13 +113,14 @@ and leave them open.
    ssh -L 6543:localhost:5432 YOUR_UH_USERNAME@128.171.46.101
    ```
 
-
-   Once you are logged in the server, open up a new **local** terminal and run:
+   Once you are logged in to the server, open a new **local** terminal and run:
 
    ```bash
    nc -z localhost 6543 && echo UP
    ```
-   If you see UP, the tunnel is working and you can start the backend. The SSH terminal just needs to stay open in the background
+
+   If you see `UP`, the tunnel is working. The SSH terminal just needs to stay
+   open in the background.
 
 3. **Start the backend** and confirm it's hitting the DB:
 
@@ -125,41 +129,58 @@ and leave them open.
    uvicorn backend.main:app --reload --reload-dir backend
    ```
 
-   Can check in the **local** terminal window to confirm the backend is hitting the database
+   In another local terminal, verify:
+
    ```bash
-    curl http://localhost:8000/api/health
-   ``` 
-   You should see {"status":"ok","db":"db"}
+   curl http://localhost:8000/api/health
+   ```
 
-4. **Start the frontend** 
+   You should see `{"status":"ok","db":"db"}`.
+
+4. **Start the frontend:**
+
    ```bash
-   cd frontend && npm run dev`
-   ``` 
-   and open
-   <http://localhost:5173>.
+   cd frontend && npm run dev
+   ```
 
-To stop: `Ctrl+C` the frontend, then the backend, then the tunnel last.
+   Then open <http://localhost:5173>.
 
-### How it behaves / troubleshooting
+To stop: `Ctrl+C` the frontend, then the backend, then close the SSH tunnel last.
 
-Reads come from the `analysis.grid_assignments_view` and
-`analysis.grid_kw_low_load_high_pv` views. Saving a bus reassignment writes
-`substation_meter` straight back to the `analysis.grid_assignments` table, so
-your DB login needs `UPDATE` permission there. To go back to the CSV, set
-`DATA_BACKEND=csv` (or remove it) and restart.
+### Troubleshooting
 
-- **Backend starts cleanly but every request errors with `connection to server
-  at "127.0.0.1", port 6543 ... Connection refused`** → the SSH tunnel was never
-  opened (or the VPN isn't connected). The backend boots fine with no database, so
-  an `Application startup complete` log does **not** mean the DB is reachable.
-  Connect the VPN, open the tunnel (step 2), confirm `nc -z localhost 6543 && echo
-  UP`, then restart the backend. (This is the most common first-run mistake.)
-- **App hangs ~30s then errors** → the SSH tunnel (or VPN) dropped mid-session.
+- **`Connection refused` on port 6543** → the SSH tunnel was never opened (or
+  the VPN isn't connected). The backend boots fine with no database, so
+  `Application startup complete` does **not** mean the DB is reachable.
+  Connect the VPN, open the tunnel (step 2), confirm `nc -z localhost 6543 &&
+  echo UP`, then restart the backend. This is the most common first-run mistake.
+- **App hangs ~30 s then errors** → the tunnel or VPN dropped mid-session.
   Reconnect the VPN if needed, then restart the tunnel.
 - **`/api/health` says `"csv"`** → `.env` wasn't read; ensure `DATA_BACKEND=db`
   and that you started uvicorn from the project root.
 - **Reads work but Save fails** → your DB login lacks `UPDATE` on
   `analysis.grid_assignments`.
+
+## Deploying changes to production
+
+You do **not** need a Vercel account to ship changes. The Vercel project is
+connected to this GitHub repository, so the deploy happens automatically:
+
+1. Push your changes to `main` (or merge a pull request into `main`).
+2. Vercel detects the push and rebuilds the app automatically.
+3. The new version is live at the production URL within a few minutes.
+
+Pull requests also get a **preview deployment** — a unique URL Vercel posts as a
+PR comment — so changes can be reviewed in a real environment before merging.
+
+The only person who needs a Vercel account is whoever manages the project
+settings (env vars, Blob store, domain). For everyone else, GitHub access is
+sufficient - Right now it is hosted on my Vercel account, so I have the access to this.
+
+> **If auto-deploy isn't triggering:** the GitHub integration may not be
+> configured yet. Ask the project owner to go to the Vercel dashboard →
+> project → Settings → Git and connect this repository. After that, pushes to
+> `main` deploy automatically.
 
 ## Notes
 
@@ -168,3 +189,6 @@ your DB login needs `UPDATE` permission there. To go back to the CSV, set
   process before starting a fresh one.
 - The `data/` folder (`grid_assignments.csv`) holds sensitive operational data
   and is gitignored — it's distributed separately, not committed.
+- Any changes you save while running locally write back to your local CSV only.
+  They are not visible to other users and do not affect the shared production
+  deployment on Vercel.
