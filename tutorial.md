@@ -67,7 +67,7 @@ Both must be running at the same time — the frontend calls the backend API.
 Vite proxies all `/api` requests to the backend on port 8000 (see
 `frontend/vite.config.ts`), so the two ports must match that config.
 
-## Using the live database instead of the CSV (optional)
+## Using the live database instead of the CSV (Ignore for now)
 
 By default the backend reads the local `data/grid_assignments.csv`. To read live
 data from the shared Postgres database (`uhm2023`, schema `analysis`, on
