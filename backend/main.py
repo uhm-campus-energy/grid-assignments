@@ -1,10 +1,11 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from .routers import assignments, grid_map, kw_data
+from . import auth
+from .routers import assignments, grid_map, kw_data, my_assignments
 
 app = FastAPI(title="Grid Assignments API")
 
@@ -22,13 +23,17 @@ _origins += [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.st
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
-    allow_methods=["GET", "PUT", "OPTIONS"],
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
 # Compress large JSON responses (the unfiltered /api/kw-data payload is ~2 MB).
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 
+# /api/health and /api/auth/* are open; everything else needs a signed-in user.
+signed_in = [Depends(auth.current_user)]
+app.include_router(auth.router, prefix="/api")
 app.include_router(grid_map.router, prefix="/api")
-app.include_router(assignments.router, prefix="/api")
-app.include_router(kw_data.router, prefix="/api")
+app.include_router(assignments.router, prefix="/api", dependencies=signed_in)
+app.include_router(kw_data.router, prefix="/api", dependencies=signed_in)
+app.include_router(my_assignments.router, prefix="/api", dependencies=signed_in)

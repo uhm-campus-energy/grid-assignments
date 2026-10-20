@@ -1,15 +1,26 @@
 import { useState } from 'react';
-import { useScenarios, useGridData } from './hooks/useGridData';
+import { useQueryClient } from '@tanstack/react-query';
+import { useMe, logout } from './api/auth';
+import LoginScreen from './components/LoginScreen';
+import { useGridData } from './hooks/useGridData';
 import GridMapAssignment from './tabs/grid-map-assignment';
 import LowLoadHighPv from './tabs/low-load-high-pv';
 
 const TAB_NAMES = ['Grid Map Assignment', 'Low Load, High PV'];
 
 export default function App() {
+  const { data: me, isLoading } = useMe();
+
+  if (isLoading) return null;
+  if (!me?.user) return <LoginScreen clientId={me?.google_client_id ?? null} />;
+  return <SignedInApp email={me.user.email} />;
+}
+
+function SignedInApp({ email }: { email: string }) {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState(0);
   const [scenario, setScenario] = useState('2026_04_11');
 
-  const { data: scenarios = [] } = useScenarios();
   const { data: gridData = [], isLoading: dataLoading } = useGridData(scenario);
 
   const styles = {
@@ -21,6 +32,9 @@ export default function App() {
       backgroundColor: '#fff',
     },
     header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       padding: '16px',
       backgroundColor: '#1565C0',
       color: '#fff',
@@ -80,7 +94,6 @@ export default function App() {
             data={gridData}
             scenario={scenario}
             onScenarioChange={setScenario}
-            scenarios={scenarios}
           />
         );
       case 1:
@@ -88,7 +101,6 @@ export default function App() {
           <LowLoadHighPv
             data={gridData}
             assignment={scenario}
-            assignments={scenarios}
             onAssignmentChange={setScenario}
           />
         );
@@ -101,6 +113,10 @@ export default function App() {
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>Grid Assignments</h1>
+        <div>
+          {email}{' '}
+          <button onClick={() => logout().then(() => queryClient.resetQueries())}>Sign out</button>
+        </div>
       </div>
 
       <div style={styles.tabBar}>

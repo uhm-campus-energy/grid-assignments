@@ -17,12 +17,13 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      // Backend on the CSV backend, pointed at a throwaway copy so e2e writes
+      // Backend on the CSV backend, signed in as a dev host (no Google/DB),
+      // pointed at a throwaway copy so e2e writes
       // never touch the real data file (see memory: csv-is-sole-data-copy).
       // cwd is the repo root; assumes the project venv at .venv/.
       command:
         'cp data/grid_assignments.csv /tmp/grid_e2e.csv && ' +
-        `DATA_BACKEND=csv GRID_CSV_PATH=/tmp/grid_e2e.csv ` +
+        `DATA_BACKEND=csv GRID_CSV_PATH=/tmp/grid_e2e.csv DEV_LOGIN_EMAIL=e2e@hawaii.edu ` +
         `.venv/bin/uvicorn backend.main:app --port ${BACKEND_PORT}`,
       cwd: '..',
       port: BACKEND_PORT,

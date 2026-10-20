@@ -4,6 +4,7 @@ import { BUS_OPTIONS } from './mapConstants';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateAssignment } from '../../api/gridMap';
 import { useKwData } from '../../hooks/useKwData';
+import { useScenarios } from '../../hooks/useGridData';
 
 const fmtKw = (v: number | null) =>
   v == null ? '—' : `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} kW`;
@@ -24,6 +25,8 @@ export default function ReassignPanel({
   const [selected, setSelected] = useState<string>(meter.substation_meter ?? 'Null');
   const queryClient = useQueryClient();
   const { data: kwData = [], isLoading: kwLoading } = useKwData();
+  const current = useScenarios().data?.find((o) => o.key === scenario);
+  const editable = current?.editable ?? false;
 
   // PV has no precomputed 10am–2pm average (only demand's avg_kw_10_to_2 exists),
   // so derive it from this meter's time series over the same 10:00–14:00 window.
@@ -173,14 +176,22 @@ export default function ReassignPanel({
           </div>
         </div>
 
+        {current && !editable && (
+          <p style={styles.value}>
+            {current.group === 'Base'
+              ? 'Only hosts can change base assignments. Use "Make my own copy" to edit your own version.'
+              : 'Only the owner can change this assignment.'}
+          </p>
+        )}
+        {mutation.isError && <p style={{ ...styles.value, color: '#c62828' }}>Save failed: {mutation.error.message}</p>}
         <div style={styles.footer}>
           <button
             onClick={() => mutation.mutate(selected)}
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || !editable}
             style={{
               ...styles.button,
               ...styles.primaryBtn,
-              opacity: mutation.isPending ? 0.6 : 1,
+              opacity: mutation.isPending || !editable ? 0.6 : 1,
             }}
           >
             {mutation.isPending ? 'Saving...' : 'Save'}
