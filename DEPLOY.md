@@ -72,9 +72,15 @@ Vercel (`backend/auth.py`), separate from the UH `uhm2023` database.
    `python3 -c "import secrets; print(secrets.token_hex(32))"`.
 4. **`HOST_EMAILS`:** comma-separated emails that are always hosts.
 
-**Managing users:** Neon console (or Vercel → Storage → the database) → Tables
-→ `users`. Set `blocked` to true to block someone (takes effect on their next
-request), or `role` to `host` to let them save.
+**Managing users:** hosts get a **Users** tab in the app listing everyone who
+has signed in and their personal assignments (with a View button), plus
+**Make inactive / Make active** and **Delete**. An inactive person can still
+sign in and view, but can't save, copy or delete anything; it takes effect on
+their next request. Deleting also removes their personal assignments, but they
+can sign in again as a new, active user, so use Make inactive to keep someone
+view-only. Nobody can change or delete their own account or anyone in
+`HOST_EMAILS`. To make someone a host, add them to `HOST_EMAILS` or set their
+`role` to `host` in the Neon console (Tables → `users`).
 
 ## Deploy
 

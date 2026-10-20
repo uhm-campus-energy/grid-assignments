@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useScenarios } from '../hooks/useGridData';
 import { createMyAssignment, deleteMyAssignment } from '../api/gridMap';
+import { useMe } from '../api/auth';
 
 const GROUPS = ['Base', 'Mine', 'Others'] as const;
 
@@ -36,6 +37,7 @@ export default function AssignmentSelect({
   const { data: options = [] } = useScenarios();
   const [newName, setNewName] = useState<string | null>(null);
   const current = options.find((o) => o.key === value);
+  const inactive = useMe().data?.user?.inactive ?? false;
 
   const create = useMutation({
     mutationFn: () => createMyAssignment(newName ?? '', value),
@@ -73,7 +75,7 @@ export default function AssignmentSelect({
         })}
       </select>
 
-      {current?.group === 'Base' && newName === null && (
+      {current?.group === 'Base' && newName === null && !inactive && (
         <div style={styles.row}>
           <button style={styles.button} onClick={() => setNewName('')}>
             Make my own copy
@@ -104,7 +106,7 @@ export default function AssignmentSelect({
           </button>
         </form>
       )}
-      {current?.group === 'Mine' && (
+      {current?.group === 'Mine' && !inactive && (
         <div style={styles.row}>
           <button
             style={styles.button}

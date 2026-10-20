@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateAssignment } from '../../api/gridMap';
 import { useKwData } from '../../hooks/useKwData';
 import { useScenarios } from '../../hooks/useGridData';
+import { useMe } from '../../api/auth';
 
 const fmtKw = (v: number | null) =>
   v == null ? '—' : `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} kW`;
@@ -27,6 +28,7 @@ export default function ReassignPanel({
   const { data: kwData = [], isLoading: kwLoading } = useKwData();
   const current = useScenarios().data?.find((o) => o.key === scenario);
   const editable = current?.editable ?? false;
+  const inactive = useMe().data?.user?.inactive ?? false;
 
   // PV has no precomputed 10am–2pm average (only demand's avg_kw_10_to_2 exists),
   // so derive it from this meter's time series over the same 10:00–14:00 window.
@@ -178,7 +180,9 @@ export default function ReassignPanel({
 
         {current && !editable && (
           <p style={styles.value}>
-            {current.group === 'Base'
+            {inactive
+              ? 'Your account is view-only.'
+              : current.group === 'Base'
               ? 'Only hosts can change base assignments. Use "Make my own copy" to edit your own version.'
               : 'Only the owner can change this assignment.'}
           </p>

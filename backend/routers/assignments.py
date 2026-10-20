@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from ..auth import current_user, require_host
+from ..auth import current_user, require_active, require_host
 from ..store import get_scenarios, get_assignments_for_scenario, upsert_assignment
 from . import my_assignments as mine
 
@@ -16,7 +16,7 @@ class AssignmentUpdate(BaseModel):
 def list_scenarios(user: dict = Depends(current_user)):
     """Dropdown entries: base assignments for everyone, then personal ones."""
     base = [
-        {"key": s, "label": s, "group": "Base", "editable": user["role"] == "host"}
+        {"key": s, "label": s, "group": "Base", "editable": user["role"] == "host" and not user["inactive"]}
         for s in get_scenarios()
     ]
     return base + mine.list_for(user)
@@ -50,6 +50,7 @@ def get_grid_assignments(scenario: str = "2026_04_23", user: dict = Depends(curr
 
 @router.put("/assignments/{meter_name}")
 def update_assignment(meter_name: str, body: AssignmentUpdate, user: dict = Depends(current_user)):
+    require_active(user)
     if mine.is_personal(body.scenario):
         updated = mine.save(body.scenario, user, meter_name, body.substation_meter)
     else:

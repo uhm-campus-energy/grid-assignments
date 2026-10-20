@@ -1,23 +1,26 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useMe, logout } from './api/auth';
+import { useMe, logout, User } from './api/auth';
 import LoginScreen from './components/LoginScreen';
 import { useGridData } from './hooks/useGridData';
 import GridMapAssignment from './tabs/grid-map-assignment';
 import LowLoadHighPv from './tabs/low-load-high-pv';
+import Users from './tabs/users';
 
 const TAB_NAMES = ['Grid Map Assignment', 'Low Load, High PV'];
+const HOST_TAB_NAMES = [...TAB_NAMES, 'Users'];
 
 export default function App() {
   const { data: me, isLoading } = useMe();
 
   if (isLoading) return null;
   if (!me?.user) return <LoginScreen clientId={me?.google_client_id ?? null} />;
-  return <SignedInApp email={me.user.email} />;
+  return <SignedInApp user={me.user} />;
 }
 
-function SignedInApp({ email }: { email: string }) {
+function SignedInApp({ user }: { user: User }) {
   const queryClient = useQueryClient();
+  const tabNames = user.role === 'host' ? HOST_TAB_NAMES : TAB_NAMES;
   const [activeTab, setActiveTab] = useState(0);
   const [scenario, setScenario] = useState('2026_04_11');
 
@@ -83,6 +86,16 @@ function SignedInApp({ email }: { email: string }) {
   };
 
   const renderTab = () => {
+    if (activeTab === 2) {
+      return (
+        <Users
+          onView={(key) => {
+            setScenario(key);
+            setActiveTab(0);
+          }}
+        />
+      );
+    }
     if (dataLoading) {
       return <div style={styles.loading}>Loading...</div>;
     }
@@ -114,13 +127,13 @@ function SignedInApp({ email }: { email: string }) {
       <div style={styles.header}>
         <h1 style={styles.title}>Grid Assignments</h1>
         <div>
-          {email}{' '}
+          {user.email}{' '}
           <button onClick={() => logout().then(() => queryClient.resetQueries())}>Sign out</button>
         </div>
       </div>
 
       <div style={styles.tabBar}>
-        {TAB_NAMES.map((name, idx) => (
+        {tabNames.map((name, idx) => (
           <button
             key={idx}
             onClick={() => setActiveTab(idx)}

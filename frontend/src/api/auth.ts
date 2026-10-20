@@ -5,6 +5,7 @@ export interface User {
   email: string;
   name: string | null;
   role: 'host' | 'user';
+  inactive: boolean; // view-only: can't save, copy or delete
 }
 
 interface Me {
@@ -16,7 +17,6 @@ export const useMe = () =>
   useQuery({
     queryKey: ['me'],
     queryFn: async () => (await api.get<Me>('/auth/me')).data,
-    staleTime: Infinity,
   });
 
 export const loginWithGoogle = (credential: string) =>

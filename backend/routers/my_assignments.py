@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from psycopg.errors import UniqueViolation
 from pydantic import BaseModel, Field
 
-from ..auth import _connect, current_user
+from ..auth import _connect, current_user, require_active
 from ..store import get_assignments_for_scenario, get_scenarios
 
 PREFIX = "p:"
@@ -49,7 +49,7 @@ def list_for(user: dict) -> list[dict]:
             "key": f"{PREFIX}{id_}",
             "label": name if owner == user["id"] else f"{name} ({email})",
             "group": "Mine" if owner == user["id"] else "Others",
-            "editable": owner == user["id"],
+            "editable": owner == user["id"] and not user["inactive"],
         }
         for id_, name, owner, email in rows
     ]
@@ -87,6 +87,7 @@ def records(key: str, user: dict) -> list[dict]:
 
 
 def save(key: str, user: dict, meter_name: str, substation_meter: str) -> dict | None:
+    require_active(user)
     id_, owner, _ = _find(key, user)
     if owner != user["id"]:
         raise HTTPException(status_code=403, detail="Only the owner can change this assignment")
@@ -110,6 +111,7 @@ class NewAssignment(BaseModel):
 @router.post("/my-assignments")
 def create(body: NewAssignment, user: dict = Depends(current_user)):
     _need_db(user)
+    require_active(user)
     name = body.name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Give the assignment a name")
@@ -133,6 +135,7 @@ def create(body: NewAssignment, user: dict = Depends(current_user)):
 
 @router.delete("/my-assignments/{key}")
 def delete(key: str, user: dict = Depends(current_user)):
+    require_active(user)
     id_, owner, _ = _find(key, user)
     if owner != user["id"]:
         raise HTTPException(status_code=403, detail="Only the owner can delete this assignment")
