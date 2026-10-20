@@ -5,15 +5,16 @@ Flow:
   2. POST /api/auth/google verifies that token with Google, records the user
      in the `users` table, and sets a signed session cookie.
   3. Every other /api route depends on current_user, which checks the cookie
-     and re-reads the user row so a block takes effect immediately.
+     and re-reads the user row so role/inactive changes take effect immediately.
 
 The users table lives in the Postgres added from Vercel's Storage tab (Neon),
 read from POSTGRES_URL. This is NOT the uhm2023 database (DATABASE_URL), which
 Vercel cannot reach.
 
-Roles: "host" can save assignments, "user" can only view. Emails in HOST_EMAILS
-are always hosts, so there is always a way in. Anyone else is promoted or
-blocked by editing their row (Neon console -> Tables -> users).
+Roles: "host" can save base assignments, "user" can only work on their own
+copies. Emails in HOST_EMAILS are always hosts, so there is always a way in.
+Hosts can mark anyone else inactive (view-only) in the Users tab; promote by
+editing their row (Neon console -> Tables -> users).
 
 Local dev / CI: set DEV_LOGIN_EMAIL to skip Google and act as that host. With
 POSTGRES_URL also set it uses that database (needed for personal assignments);
@@ -73,13 +74,23 @@ def verify(token: str, now: float | None = None) -> str | None:
 
 # --- users table --------------------------------------------------------------
 
+_schema_ready = False
+
+
 def _connect():
+    """A connection with the tables in place (created/updated once per process)."""
     # ponytail: one connection per request; fine through Neon's pooled URL at
     # this traffic. Use a pool if requests start queueing.
+    global _schema_ready
     dsn = os.getenv("POSTGRES_URL")
     if not dsn:
         raise RuntimeError("POSTGRES_URL is not set. Connect a Neon database in Vercel's Storage tab.")
-    return psycopg.connect(dsn)
+    conn = psycopg.connect(dsn)
+    if not _schema_ready:
+        conn.execute(SCHEMA)
+        conn.commit()
+        _schema_ready = True
+    return conn
 
 
 # Three linked tables: a user owns personal assignments, and each assignment
@@ -91,10 +102,18 @@ CREATE TABLE IF NOT EXISTS users (
     email      text NOT NULL UNIQUE,
     name       text,
     role       text NOT NULL DEFAULT 'user' CHECK (role IN ('host', 'user')),
-    blocked    boolean NOT NULL DEFAULT false,
+    inactive   boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now(),
     last_login timestamptz
 );
+-- ponytail: one-off rename for databases created before 2026-10-21 (column
+-- was "blocked"); delete once production has run it.
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'users' AND column_name = 'blocked') THEN
+        ALTER TABLE users RENAME COLUMN blocked TO inactive;
+    END IF;
+END $$;
 CREATE TABLE IF NOT EXISTS assignments (
     id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id         bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -114,7 +133,6 @@ CREATE TABLE IF NOT EXISTS assignment_meters (
 
 def _record_login(email: str, name: str | None) -> None:
     with _connect() as conn:
-        conn.execute(SCHEMA)
         conn.execute(
             """
             INSERT INTO users (email, name, last_login) VALUES (%s, %s, now())
@@ -125,15 +143,15 @@ def _record_login(email: str, name: str | None) -> None:
 
 
 def _load_user(email: str) -> dict | None:
-    """The signed-in user with their effective role, or None if unknown/blocked."""
+    """The signed-in user with their effective role, or None if unknown."""
     with _connect() as conn:
         row = conn.execute(
-            "SELECT id, name, role, blocked FROM users WHERE email = %s", (email,)
+            "SELECT id, name, role, inactive FROM users WHERE email = %s", (email,)
         ).fetchone()
-    if row is None or row[3]:
+    if row is None:
         return None
     role = "host" if email in _host_emails() else row[2]
-    return {"id": row[0], "email": email, "name": row[1], "role": role}
+    return {"id": row[0], "email": email, "name": row[1], "role": role, "inactive": row[3]}
 
 
 # --- dependencies used by the other routers ----------------------------------
@@ -141,7 +159,7 @@ def _load_user(email: str) -> dict | None:
 def current_user(request: Request) -> dict:
     if dev := _dev_email():
         if not os.getenv("POSTGRES_URL"):
-            return {"id": None, "email": dev, "name": "Dev", "role": "host"}
+            return {"id": None, "email": dev, "name": "Dev", "role": "host", "inactive": False}
         _record_login(dev, "Dev")  # dev only: a real row, so personal assignments work
         return {**_load_user(dev), "role": "host"}
     token = request.cookies.get(COOKIE)
@@ -154,8 +172,14 @@ def current_user(request: Request) -> dict:
 
 def require_host(user: dict = Depends(current_user)) -> dict:
     if user["role"] != "host":
-        raise HTTPException(status_code=403, detail="Only hosts can change assignments")
+        raise HTTPException(status_code=403, detail="Only hosts can do this")
     return user
+
+
+def require_active(user: dict) -> None:
+    """Inactive accounts are view-only: called by every endpoint that changes data."""
+    if user["inactive"]:
+        raise HTTPException(status_code=403, detail="Your account is view-only")
 
 
 # --- endpoints ----------------------------------------------------------------
@@ -192,8 +216,6 @@ def google_login(body: GoogleLogin, response: Response):
 
     email = info["email"].lower()
     _record_login(email, info.get("name"))
-    if _load_user(email) is None:
-        raise HTTPException(status_code=403, detail="Your account has been blocked")
 
     response.set_cookie(
         COOKIE,
