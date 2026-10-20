@@ -65,7 +65,7 @@ Vercel (`backend/auth.py`), separate from the UH `uhm2023` database.
    **OAuth consent screen** (Internal if offered, else External) → then
    **Credentials → Create credentials → OAuth client ID → Web application**.
    Under **Authorized JavaScript origins** add
-   `https://grid-assignments.vercel.app` and `http://localhost:5173`. No
+   `https://uhm-grid-assignments.vercel.app` and `http://localhost:5173`. No
    redirect URI is needed. Copy the client ID into `GOOGLE_CLIENT_ID`.
    Google does not accept wildcards, so sign-in does not work on preview links.
 3. **`AUTH_SECRET`:** a long random string,
