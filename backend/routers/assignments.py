@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from ..auth import require_host
 from ..store import get_scenarios, get_assignments_for_scenario, upsert_assignment
 
 router = APIRouter()
@@ -38,7 +39,7 @@ def get_grid_assignments(scenario: str = "2026_04_23"):
     return sorted(result, key=lambda r: r["meter_name"])
 
 
-@router.put("/assignments/{meter_name}")
+@router.put("/assignments/{meter_name}", dependencies=[Depends(require_host)])
 def update_assignment(meter_name: str, body: AssignmentUpdate):
     updated = upsert_assignment(meter_name, body.scenario, body.substation_meter)
     if updated is None:
