@@ -25,7 +25,7 @@ const styles = {
 };
 
 // The assignment dropdown shared by both tabs: base assignments, the user's
-// own copies, and (for hosts) everyone else's. Also creates and deletes copies.
+// own copies, and (for admins) everyone else's. Also creates and deletes copies.
 export default function AssignmentSelect({
   value,
   onChange,

@@ -43,15 +43,15 @@ The repo is `uhm-campus-energy/grid-assignments`; the Vercel project is
    | `GITHUB_BRANCH` | optional, defaults to `main` |
    | `GOOGLE_CLIENT_ID` | see Login below |
    | `AUTH_SECRET` | see Login below (sensitive) |
-   | `HOST_EMAILS` | see Login below |
+   | `ADMIN_EMAILS` | see Login below |
 
    Changing a variable requires a redeploy.
 
 ## Login
 
-Users sign in with their hawaii.edu Google account. Hosts can change the base
+Users sign in with their hawaii.edu Google account. Admins can change the base
 assignments; everyone can make personal copies of a base assignment and edit
-their own. Hosts can view everyone's copies but not change them. The user list lives in a Neon Postgres added through
+their own. Admins can view everyone's copies but not change them. The user list lives in a Neon Postgres added through
 Vercel (`backend/auth.py`), separate from the UH `uhm2023` database.
 
 1. **Database:** Vercel → project → **Storage → Create Database → Neon**
@@ -70,17 +70,17 @@ Vercel (`backend/auth.py`), separate from the UH `uhm2023` database.
    Google does not accept wildcards, so sign-in does not work on preview links.
 3. **`AUTH_SECRET`:** a long random string,
    `python3 -c "import secrets; print(secrets.token_hex(32))"`.
-4. **`HOST_EMAILS`:** comma-separated emails that are always hosts.
+4. **`ADMIN_EMAILS`:** comma-separated emails that are always admins.
 
-**Managing users:** hosts get a **Users** tab in the app listing everyone who
+**Managing users:** admins get a **Users** tab in the app listing everyone who
 has signed in and their personal assignments (with a View button), plus
 **Make inactive / Make active** and **Delete**. An inactive person can still
 sign in and view, but can't save, copy or delete anything; it takes effect on
 their next request. Deleting also removes their personal assignments, but they
 can sign in again as a new, active user, so use Make inactive to keep someone
 view-only. Nobody can change or delete their own account or anyone in
-`HOST_EMAILS`. To make someone a host, add them to `HOST_EMAILS` or set their
-`role` to `host` in the Neon console (Tables → `users`).
+`ADMIN_EMAILS`. To make someone an admin, add them to `ADMIN_EMAILS` or set their
+`role` to `admin` in the Neon console (Tables → `users`).
 
 ## Deploy
 
@@ -110,6 +110,6 @@ push any code change to trigger it.
 - Saves on **preview** links also commit to `main`.
 - The CSV is **not** bundled into the deploy (`.vercelignore` excludes `data/`).
 - **Access:** only signed-in hawaii.edu accounts can use the app, and only
-  hosts can save. The CSV itself is still public in the repo.
+  admins can save. The CSV itself is still public in the repo.
 - `DEV_LOGIN_EMAIL` skips sign-in for local dev and tests. It is ignored on
   Vercel; never set it there anyway.

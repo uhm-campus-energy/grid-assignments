@@ -11,12 +11,12 @@ The users table lives in the Postgres added from Vercel's Storage tab (Neon),
 read from POSTGRES_URL. This is NOT the uhm2023 database (DATABASE_URL), which
 Vercel cannot reach.
 
-Roles: "host" can save base assignments, "user" can only work on their own
-copies. Emails in HOST_EMAILS are always hosts, so there is always a way in.
-Hosts can mark anyone else inactive (view-only) in the Users tab; promote by
+Roles: "admin" can save base assignments, "user" can only work on their own
+copies. Emails in ADMIN_EMAILS are always admins, so there is always a way in.
+Admins can mark anyone else inactive (view-only) in the Users tab; promote by
 editing their row (Neon console -> Tables -> users).
 
-Local dev / CI: set DEV_LOGIN_EMAIL to skip Google and act as that host. With
+Local dev / CI: set DEV_LOGIN_EMAIL to skip Google and act as that admin. With
 POSTGRES_URL also set it uses that database (needed for personal assignments);
 without it, no database at all. It is ignored on Vercel.
 """
@@ -41,8 +41,8 @@ def _dev_email() -> str | None:
     return None if os.getenv("VERCEL") else os.getenv("DEV_LOGIN_EMAIL")
 
 
-def _host_emails() -> set[str]:
-    return {e.strip().lower() for e in os.getenv("HOST_EMAILS", "").split(",") if e.strip()}
+def _admin_emails() -> set[str]:
+    return {e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "").split(",") if e.strip()}
 
 
 def _secret() -> bytes:
@@ -101,17 +101,23 @@ CREATE TABLE IF NOT EXISTS users (
     id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     email      text NOT NULL UNIQUE,
     name       text,
-    role       text NOT NULL DEFAULT 'user' CHECK (role IN ('host', 'user')),
+    role       text NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
     inactive   boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now(),
     last_login timestamptz
 );
--- ponytail: one-off rename for databases created before 2026-10-21 (column
--- was "blocked"); delete once production has run it.
+-- ponytail: one-off upgrade for databases created before 2026-10-21 (column
+-- "blocked", role 'host'); delete once production has run it.
 DO $$ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.columns
                WHERE table_name = 'users' AND column_name = 'blocked') THEN
         ALTER TABLE users RENAME COLUMN blocked TO inactive;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_constraint
+               WHERE conname = 'users_role_check' AND pg_get_constraintdef(oid) LIKE '%host%') THEN
+        ALTER TABLE users DROP CONSTRAINT users_role_check;
+        UPDATE users SET role = 'admin' WHERE role = 'host';
+        ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'user'));
     END IF;
 END $$;
 CREATE TABLE IF NOT EXISTS assignments (
@@ -150,7 +156,7 @@ def _load_user(email: str) -> dict | None:
         ).fetchone()
     if row is None:
         return None
-    role = "host" if email in _host_emails() else row[2]
+    role = "admin" if email in _admin_emails() else row[2]
     return {"id": row[0], "email": email, "name": row[1], "role": role, "inactive": row[3]}
 
 
@@ -159,9 +165,9 @@ def _load_user(email: str) -> dict | None:
 def current_user(request: Request) -> dict:
     if dev := _dev_email():
         if not os.getenv("POSTGRES_URL"):
-            return {"id": None, "email": dev, "name": "Dev", "role": "host", "inactive": False}
+            return {"id": None, "email": dev, "name": "Dev", "role": "admin", "inactive": False}
         _record_login(dev, "Dev")  # dev only: a real row, so personal assignments work
-        return {**_load_user(dev), "role": "host"}
+        return {**_load_user(dev), "role": "admin"}
     token = request.cookies.get(COOKIE)
     email = verify(token) if token else None
     user = _load_user(email) if email else None
@@ -170,9 +176,9 @@ def current_user(request: Request) -> dict:
     return user
 
 
-def require_host(user: dict = Depends(current_user)) -> dict:
-    if user["role"] != "host":
-        raise HTTPException(status_code=403, detail="Only hosts can do this")
+def require_admin(user: dict = Depends(current_user)) -> dict:
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can do this")
     return user
 
 

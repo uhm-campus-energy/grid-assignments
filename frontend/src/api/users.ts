@@ -4,8 +4,8 @@ export interface ManagedUser {
   id: number;
   email: string;
   name: string | null;
-  role: 'host' | 'user';
-  protected: boolean; // in HOST_EMAILS: can't be changed or deleted here
+  role: 'admin' | 'user';
+  protected: boolean; // in ADMIN_EMAILS: can't be changed or deleted here
   inactive: boolean; // view-only
   created_at: string;
   last_login: string | null;

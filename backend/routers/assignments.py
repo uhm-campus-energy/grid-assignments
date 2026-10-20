@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from ..auth import current_user, require_active, require_host
+from ..auth import current_user, require_active, require_admin
 from ..store import get_scenarios, get_assignments_for_scenario, upsert_assignment
 from . import my_assignments as mine
 
@@ -16,7 +16,7 @@ class AssignmentUpdate(BaseModel):
 def list_scenarios(user: dict = Depends(current_user)):
     """Dropdown entries: base assignments for everyone, then personal ones."""
     base = [
-        {"key": s, "label": s, "group": "Base", "editable": user["role"] == "host" and not user["inactive"]}
+        {"key": s, "label": s, "group": "Base", "editable": user["role"] == "admin" and not user["inactive"]}
         for s in get_scenarios()
     ]
     return base + mine.list_for(user)
@@ -54,7 +54,7 @@ def update_assignment(meter_name: str, body: AssignmentUpdate, user: dict = Depe
     if mine.is_personal(body.scenario):
         updated = mine.save(body.scenario, user, meter_name, body.substation_meter)
     else:
-        require_host(user)
+        require_admin(user)
         updated = upsert_assignment(meter_name, body.scenario, body.substation_meter)
     if updated is None:
         raise HTTPException(status_code=404, detail="Meter/scenario combination not found")
