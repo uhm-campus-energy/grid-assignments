@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMe, logout } from './api/auth';
 import LoginScreen from './components/LoginScreen';
-import { useScenarios, useGridData } from './hooks/useGridData';
+import { useGridData } from './hooks/useGridData';
 import GridMapAssignment from './tabs/grid-map-assignment';
 import LowLoadHighPv from './tabs/low-load-high-pv';
 
@@ -21,7 +21,6 @@ function SignedInApp({ email }: { email: string }) {
   const [activeTab, setActiveTab] = useState(0);
   const [scenario, setScenario] = useState('2026_04_11');
 
-  const { data: scenarios = [] } = useScenarios();
   const { data: gridData = [], isLoading: dataLoading } = useGridData(scenario);
 
   const styles = {
@@ -95,7 +94,6 @@ function SignedInApp({ email }: { email: string }) {
             data={gridData}
             scenario={scenario}
             onScenarioChange={setScenario}
-            scenarios={scenarios}
           />
         );
       case 1:
@@ -103,7 +101,6 @@ function SignedInApp({ email }: { email: string }) {
           <LowLoadHighPv
             data={gridData}
             assignment={scenario}
-            assignments={scenarios}
             onAssignmentChange={setScenario}
           />
         );

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from . import auth
-from .routers import assignments, grid_map, kw_data
+from .routers import assignments, grid_map, kw_data, my_assignments
 
 app = FastAPI(title="Grid Assignments API")
 
@@ -23,7 +23,7 @@ _origins += [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.st
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
-    allow_methods=["GET", "PUT", "POST", "OPTIONS"],
+    allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
@@ -36,3 +36,4 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(grid_map.router, prefix="/api")
 app.include_router(assignments.router, prefix="/api", dependencies=signed_in)
 app.include_router(kw_data.router, prefix="/api", dependencies=signed_in)
+app.include_router(my_assignments.router, prefix="/api", dependencies=signed_in)

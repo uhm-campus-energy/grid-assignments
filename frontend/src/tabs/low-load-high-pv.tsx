@@ -2,11 +2,11 @@ import { useMemo, useRef, useState, useEffect } from 'react';
 import Plot from 'react-plotly.js';
 import { useKwData } from '../hooks/useKwData';
 import { GridAssignment } from '../types/gridAssignment';
+import AssignmentSelect from '../components/AssignmentSelect';
 
 interface Props {
   data: GridAssignment[];
   assignment: string;
-  assignments: string[];
   onAssignmentChange: (v: string) => void;
 }
 
@@ -26,7 +26,7 @@ function formatPinnedDate(s: string): string {
 
 const fmtKw = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 3 });
 
-export default function LowLoadHighPv({ data, assignment, assignments, onAssignmentChange }: Props) {
+export default function LowLoadHighPv({ data, assignment, onAssignmentChange }: Props) {
   const { data: kwData = [], isLoading } = useKwData();
   const gridRef = useRef<HTMLDivElement>(null);
   const [chartHeight, setChartHeight] = useState(300);
@@ -133,13 +133,7 @@ export default function LowLoadHighPv({ data, assignment, assignments, onAssignm
       <div style={styles.sidebar}>
         <div style={{ marginBottom: '20px' }}>
           <div style={styles.sidebarTitle}>Assignment</div>
-          <select
-            value={assignment}
-            onChange={(e) => onAssignmentChange(e.target.value)}
-            style={styles.select}
-          >
-            {assignments.map((a) => <option key={a} value={a}>{a}</option>)}
-          </select>
+          <AssignmentSelect value={assignment} onChange={onAssignmentChange} />
         </div>
 
         <div>

@@ -16,7 +16,8 @@ are always hosts, so there is always a way in. Anyone else is promoted or
 blocked by editing their row (Neon console -> Tables -> users).
 
 Local dev / CI: set DEV_LOGIN_EMAIL to skip Google and act as that host. With
-POSTGRES_URL also set it uses that database; without it, no database at all. It is ignored on Vercel.
+POSTGRES_URL also set it uses that database (needed for personal assignments);
+without it, no database at all. It is ignored on Vercel.
 """
 import hashlib
 import hmac
@@ -81,6 +82,9 @@ def _connect():
     return psycopg.connect(dsn)
 
 
+# Three linked tables: a user owns personal assignments, and each assignment
+# holds one bus choice per meter. Deleting a user or an assignment deletes
+# what hangs off it (ON DELETE CASCADE).
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
     id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -90,6 +94,20 @@ CREATE TABLE IF NOT EXISTS users (
     blocked    boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now(),
     last_login timestamptz
+);
+CREATE TABLE IF NOT EXISTS assignments (
+    id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id         bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name            text NOT NULL,
+    base_assignment text NOT NULL,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (user_id, name)
+);
+CREATE TABLE IF NOT EXISTS assignment_meters (
+    assignment_id    bigint NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    meter_name       text NOT NULL,
+    substation_meter text,
+    PRIMARY KEY (assignment_id, meter_name)
 );
 """
 
@@ -124,7 +142,7 @@ def current_user(request: Request) -> dict:
     if dev := _dev_email():
         if not os.getenv("POSTGRES_URL"):
             return {"id": None, "email": dev, "name": "Dev", "role": "host"}
-        _record_login(dev, "Dev")  # dev only: a real row in the users table
+        _record_login(dev, "Dev")  # dev only: a real row, so personal assignments work
         return {**_load_user(dev), "role": "host"}
     token = request.cookies.get(COOKIE)
     email = verify(token) if token else None

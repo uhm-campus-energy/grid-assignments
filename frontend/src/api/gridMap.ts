@@ -1,7 +1,7 @@
 import api from './client';
-import { GridAssignment } from '../types/gridAssignment';
+import { GridAssignment, ScenarioOption } from '../types/gridAssignment';
 
-export async function fetchScenarios(): Promise<string[]> {
+export async function fetchScenarios(): Promise<ScenarioOption[]> {
   const response = await api.get('/scenarios');
   return response.data;
 }
@@ -22,5 +22,15 @@ export async function updateAssignment(
     scenario,
     substation_meter: substationMeter,
   });
+  return response.data;
+}
+
+export async function createMyAssignment(name: string, base: string): Promise<{ key: string }> {
+  const response = await api.post('/my-assignments', { name, base });
+  return response.data;
+}
+
+export async function deleteMyAssignment(key: string): Promise<unknown> {
+  const response = await api.delete(`/my-assignments/${key}`);
   return response.data;
 }

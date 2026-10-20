@@ -14,4 +14,13 @@ export interface GridAssignment {
   assignment: string | null;
 }
 
+// One entry in the assignment dropdown. `key` is the base assignment's name,
+// or "p:<id>" for a personal copy.
+export interface ScenarioOption {
+  key: string;
+  label: string;
+  group: 'Base' | 'Mine' | 'Others';
+  editable: boolean;
+}
+
 export type BusType = 'MA' | 'MB' | 'LA' | 'LB' | 'LC' | 'Null';

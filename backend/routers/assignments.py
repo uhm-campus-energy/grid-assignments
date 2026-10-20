@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from ..auth import require_host
+from ..auth import current_user, require_host
 from ..store import get_scenarios, get_assignments_for_scenario, upsert_assignment
+from . import my_assignments as mine
 
 router = APIRouter()
 
@@ -12,13 +13,21 @@ class AssignmentUpdate(BaseModel):
 
 
 @router.get("/scenarios")
-def list_scenarios():
-    return get_scenarios()
+def list_scenarios(user: dict = Depends(current_user)):
+    """Dropdown entries: base assignments for everyone, then personal ones."""
+    base = [
+        {"key": s, "label": s, "group": "Base", "editable": user["role"] == "host"}
+        for s in get_scenarios()
+    ]
+    return base + mine.list_for(user)
 
 
 @router.get("/grid-assignments")
-def get_grid_assignments(scenario: str = "2026_04_23"):
-    records = get_assignments_for_scenario(scenario)
+def get_grid_assignments(scenario: str = "2026_04_23", user: dict = Depends(current_user)):
+    if mine.is_personal(scenario):
+        records = mine.records(scenario, user)
+    else:
+        records = get_assignments_for_scenario(scenario)
     result = []
     for r in records:
         result.append({
@@ -39,9 +48,13 @@ def get_grid_assignments(scenario: str = "2026_04_23"):
     return sorted(result, key=lambda r: r["meter_name"])
 
 
-@router.put("/assignments/{meter_name}", dependencies=[Depends(require_host)])
-def update_assignment(meter_name: str, body: AssignmentUpdate):
-    updated = upsert_assignment(meter_name, body.scenario, body.substation_meter)
+@router.put("/assignments/{meter_name}")
+def update_assignment(meter_name: str, body: AssignmentUpdate, user: dict = Depends(current_user)):
+    if mine.is_personal(body.scenario):
+        updated = mine.save(body.scenario, user, meter_name, body.substation_meter)
+    else:
+        require_host(user)
+        updated = upsert_assignment(meter_name, body.scenario, body.substation_meter)
     if updated is None:
         raise HTTPException(status_code=404, detail="Meter/scenario combination not found")
     return {

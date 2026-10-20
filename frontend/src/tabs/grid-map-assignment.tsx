@@ -2,19 +2,18 @@
 import GridMap from '../components/map/GridMap';
 import { GridAssignment } from '../types/gridAssignment';
 import { BUS_COLORS } from '../components/map/mapConstants';
+import AssignmentSelect from '../components/AssignmentSelect';
 
 interface GridMapAssignmentProps {
   data: GridAssignment[];
   scenario: string;
   onScenarioChange: (scenario: string) => void;
-  scenarios: string[];
 }
 
 export default function GridMapAssignment({
   data,
   scenario,
   onScenarioChange,
-  scenarios,
 }: GridMapAssignmentProps) {
   const styles = {
     container: {
@@ -36,14 +35,6 @@ export default function GridMapAssignment({
       color: '#666',
       marginBottom: '12px',
     },
-    select: {
-      width: '100%',
-      padding: '8px',
-      fontSize: '14px',
-      border: '1px solid #ddd',
-      borderRadius: '4px',
-      fontFamily: 'inherit',
-    },
     mapContainer: {
       flex: 1,
     },
@@ -54,17 +45,7 @@ export default function GridMapAssignment({
       <div style={styles.sidebar}>
         <div style={{ marginBottom: '20px' }}>
           <label style={styles.sidebarTitle}>Assignment</label>
-          <select
-            value={scenario}
-            onChange={(e) => onScenarioChange(e.target.value)}
-            style={styles.select}
-          >
-            {scenarios.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+          <AssignmentSelect value={scenario} onChange={onScenarioChange} />
         </div>
 
         <div>

@@ -49,13 +49,17 @@ The repo is `uhm-campus-energy/grid-assignments`; the Vercel project is
 
 ## Login
 
-Users sign in with their hawaii.edu Google account. Hosts can save; everyone
-else can only view. The user list lives in a Neon Postgres added through
+Users sign in with their hawaii.edu Google account. Hosts can change the base
+assignments; everyone can make personal copies of a base assignment and edit
+their own. Hosts can view everyone's copies but not change them. The user list lives in a Neon Postgres added through
 Vercel (`backend/auth.py`), separate from the UH `uhm2023` database.
 
 1. **Database:** Vercel → project → **Storage → Create Database → Neon**
    (free plan), and connect it to Production and Preview. Vercel adds
-   `POSTGRES_URL` itself. The `users` table is created on the first sign-in.
+   `POSTGRES_URL` itself. The tables are created on the first sign-in:
+   `users`, `assignments` (personal copies, linked to `users.id`) and
+   `assignment_meters` (one bus per meter, linked to `assignments.id`).
+   Deleting a user or an assignment deletes what belongs to it.
 2. **Google sign-in client:** Google Cloud Console (a hawaii.edu account can
    switch Google Cloud on at hawaii.edu/google/extra) → APIs & Services →
    **OAuth consent screen** (Internal if offered, else External) → then
