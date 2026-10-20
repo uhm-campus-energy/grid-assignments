@@ -3,7 +3,7 @@
 Reads/writes a CSV on disk. The path defaults to data/grid_assignments.csv but
 can be overridden with GRID_CSV_PATH — point tests at a throwaway copy so they
 never mutate the real data file. Row-processing lives in _csv_logic so the
-Blob-backed store (blob_store) shares identical behavior.
+GitHub-backed store (github_store) shares identical behavior.
 """
 import os
 import threading

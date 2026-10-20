@@ -4,7 +4,7 @@
 frontend/.env
 frontend/.env.*
 
-# Data lives in Vercel Blob (seeded separately), not in the deployment bundle.
+# The deployed app reads the CSV from the GitHub repo, not the deployment bundle.
 data/
 
 # Local / build / dev artifacts (regenerated or unneeded in the deploy)

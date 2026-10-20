@@ -174,7 +174,7 @@ Pull requests also get a **preview deployment** — a unique URL Vercel posts as
 PR comment — so changes can be reviewed in a real environment before merging.
 
 The only person who needs a Vercel account is whoever manages the project
-settings (env vars, Blob store, domain). For everyone else, GitHub access is
+settings (env vars, domain). For everyone else, GitHub access is
 sufficient - Right now it is hosted on my Vercel account, so I have the access to this.
 
 > **If auto-deploy isn't triggering:** the GitHub integration may not be

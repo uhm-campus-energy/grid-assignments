@@ -1,9 +1,9 @@
-"""Pure CSV row-processing logic shared by the file- and Blob-backed stores.
+"""Pure CSV row-processing logic shared by the file- and GitHub-backed stores.
 
 The wide ``grid_assignments.csv`` carries both per-meter assignment data
 (columns 0-14) and a demand/PV time series (columns 16-18). These helpers work
 on already-parsed ``rows`` so identical behavior is reused whether the bytes
-came from local disk (``csv_store``) or Vercel Blob (``blob_store``).
+came from local disk (``csv_store``) or the GitHub repo (``github_store``).
 
 Behavior here is a straight extraction of the original ``csv_store`` logic — the
 column indices, dedup rules and ``_MIN_COLS`` guard are unchanged.
