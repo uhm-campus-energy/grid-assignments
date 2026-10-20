@@ -34,7 +34,7 @@ const styles = {
   error: { color: '#c62828', marginBottom: '12px' },
 };
 
-// Host-only: everyone who has signed in, their personal assignments, and
+// Admin-only: everyone who has signed in, their personal assignments, and
 // active/inactive (view-only) and delete controls.
 export default function Users({ onView }: { onView: (key: string) => void }) {
   const queryClient = useQueryClient();
@@ -88,7 +88,7 @@ export default function Users({ onView }: { onView: (key: string) => void }) {
               </td>
               <td style={styles.td}>
                 {u.protected ? (
-                  <span style={{ color: '#999' }}>In HOST_EMAILS</span>
+                  <span style={{ color: '#999' }}>In ADMIN_EMAILS</span>
                 ) : (
                   <>
                     <button style={styles.button} disabled={toggle.isPending} onClick={() => toggle.mutate(u)}>

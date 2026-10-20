@@ -6,7 +6,7 @@ avg kW, time series) still comes from the base assignment in the data store.
 
 The frontend refers to a personal assignment by the key "p:<id>"; base
 assignment names never start with that. Owners can edit and delete their own;
-hosts can view everyone's but not change them.
+admins can view everyone's but not change them.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from psycopg.errors import UniqueViolation
@@ -33,7 +33,7 @@ def list_for(user: dict) -> list[dict]:
     """The personal assignments this user may see, as dropdown entries."""
     if user["id"] is None:
         return []
-    host = user["role"] == "host"
+    admin = user["role"] == "admin"
     with _connect() as conn:
         rows = conn.execute(
             """
@@ -42,7 +42,7 @@ def list_for(user: dict) -> list[dict]:
             WHERE %s OR a.user_id = %s
             ORDER BY u.email, a.name
             """,
-            (host, user["id"]),
+            (admin, user["id"]),
         ).fetchall()
     return [
         {
@@ -66,7 +66,7 @@ def _find(key: str, user: dict) -> tuple[int, int, str]:
         row = conn.execute(
             "SELECT id, user_id, base_assignment FROM assignments WHERE id = %s", (id_,)
         ).fetchone()
-    if row is None or (row[1] != user["id"] and user["role"] != "host"):
+    if row is None or (row[1] != user["id"] and user["role"] != "admin"):
         raise HTTPException(status_code=404, detail="Assignment not found")
     return row
 

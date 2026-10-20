@@ -4,7 +4,7 @@ import api from './client';
 export interface User {
   email: string;
   name: string | null;
-  role: 'host' | 'user';
+  role: 'admin' | 'user';
   inactive: boolean; // view-only: can't save, copy or delete
 }
 

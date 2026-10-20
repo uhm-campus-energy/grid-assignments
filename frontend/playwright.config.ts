@@ -17,7 +17,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      // Backend on the CSV backend, signed in as a dev host (no Google/DB),
+      // Backend on the CSV backend, signed in as a dev admin (no Google/DB),
       // pointed at a throwaway copy so e2e writes
       // never touch the real data file (see memory: csv-is-sole-data-copy).
       // cwd is the repo root; assumes the project venv at .venv/.

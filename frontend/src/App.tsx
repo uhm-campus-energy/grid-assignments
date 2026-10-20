@@ -8,7 +8,7 @@ import LowLoadHighPv from './tabs/low-load-high-pv';
 import Users from './tabs/users';
 
 const TAB_NAMES = ['Grid Map Assignment', 'Low Load, High PV'];
-const HOST_TAB_NAMES = [...TAB_NAMES, 'Users'];
+const ADMIN_TAB_NAMES = [...TAB_NAMES, 'Users'];
 
 export default function App() {
   const { data: me, isLoading } = useMe();
@@ -20,7 +20,7 @@ export default function App() {
 
 function SignedInApp({ user }: { user: User }) {
   const queryClient = useQueryClient();
-  const tabNames = user.role === 'host' ? HOST_TAB_NAMES : TAB_NAMES;
+  const tabNames = user.role === 'admin' ? ADMIN_TAB_NAMES : TAB_NAMES;
   const [activeTab, setActiveTab] = useState(0);
   const [scenario, setScenario] = useState('2026_04_11');
 

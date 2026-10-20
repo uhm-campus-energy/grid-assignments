@@ -183,7 +183,7 @@ export default function ReassignPanel({
             {inactive
               ? 'Your account is view-only.'
               : current.group === 'Base'
-              ? 'Only hosts can change base assignments. Use "Make my own copy" to edit your own version.'
+              ? 'Only admins can change base assignments. Use "Make my own copy" to edit your own version.'
               : 'Only the owner can change this assignment.'}
           </p>
         )}
