@@ -19,7 +19,6 @@ interface GridMapProps {
   sizeBy?: string;
   xRange?: [number, number];
   yRange?: [number, number];
-  onReassign: (meterName: string, newBus: string) => void;
 }
 
 export default function GridMap({
@@ -29,7 +28,6 @@ export default function GridMap({
   sizeBy,
   xRange = [IMG_X0, IMG_X1],
   yRange = [IMG_Y0, IMG_Y1],
-  onReassign,
 }: GridMapProps) {
   const [selectedMeter, setSelectedMeter] = useState<GridAssignment | null>(null);
   const { data: kwData = [] } = useKwData();
@@ -160,10 +158,7 @@ export default function GridMap({
           meter={selectedMeter}
           scenario={scenario}
           onClose={() => setSelectedMeter(null)}
-          onReassign={(newBus) => {
-            onReassign(selectedMeter.meter_name, newBus);
-            setSelectedMeter(null);
-          }}
+          onReassign={() => setSelectedMeter(null)}
         />
       )}
     </div>

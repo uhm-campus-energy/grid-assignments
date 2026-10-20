@@ -1,8 +1,6 @@
 
 import GridMap from '../components/map/GridMap';
 import { GridAssignment } from '../types/gridAssignment';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { updateAssignment } from '../api/gridMap';
 import { BUS_COLORS } from '../components/map/mapConstants';
 
 interface GridMapAssignmentProps {
@@ -18,15 +16,6 @@ export default function GridMapAssignment({
   onScenarioChange,
   scenarios,
 }: GridMapAssignmentProps) {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: (vars: { meterName: string; newBus: string }) =>
-      updateAssignment(vars.meterName, scenario, vars.newBus),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['grid-assignments'] });
-    },
-  });
-
   const styles = {
     container: {
       display: 'flex',
@@ -100,13 +89,7 @@ export default function GridMapAssignment({
         </div>
       </div>
       <div style={styles.mapContainer}>
-        <GridMap
-          data={data}
-          scenario={scenario}
-          onReassign={(meterName, newBus) => {
-            mutation.mutate({ meterName, newBus });
-          }}
-        />
+        <GridMap data={data} scenario={scenario} />
       </div>
     </div>
   );
