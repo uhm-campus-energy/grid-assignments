@@ -20,6 +20,9 @@ const styles = {
     fontFamily: 'inherit',
   },
   row: { display: 'flex', gap: '6px', marginTop: '8px' },
+  // A <select> can't scroll its own text, so long names are repeated here
+  // (scrolling via the .scroll-x class in index.html).
+  fullName: { marginTop: '6px', fontSize: '13px', color: '#555' },
   button: { padding: '6px 10px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' },
   error: { color: '#c62828', fontSize: '13px', marginTop: '6px' },
 };
@@ -58,7 +61,12 @@ export default function AssignmentSelect({
 
   return (
     <div>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={styles.select}>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={styles.select}
+        title={current?.label}
+      >
         {GROUPS.map((group) => {
           const items = options.filter((o) => o.group === group);
           return (
@@ -74,6 +82,7 @@ export default function AssignmentSelect({
           );
         })}
       </select>
+      {current && current.group !== 'Base' && <div className="scroll-x" style={styles.fullName}>{current.label}</div>}
 
       {current?.group === 'Base' && newName === null && !inactive && (
         <div style={styles.row}>
@@ -84,7 +93,6 @@ export default function AssignmentSelect({
       )}
       {newName !== null && (
         <form
-          style={styles.row}
           onSubmit={(e) => {
             e.preventDefault();
             create.mutate();
@@ -96,14 +104,20 @@ export default function AssignmentSelect({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             maxLength={60}
-            style={{ ...styles.select, flex: 1 }}
+            style={{ ...styles.select, marginTop: '8px' }}
           />
-          <button type="submit" style={styles.button} disabled={create.isPending || !newName.trim()}>
-            Create
-          </button>
-          <button type="button" style={styles.button} onClick={() => setNewName(null)}>
-            Cancel
-          </button>
+          <div style={styles.row}>
+            <button
+              type="submit"
+              style={{ ...styles.button, flex: 1 }}
+              disabled={create.isPending || !newName.trim()}
+            >
+              Create
+            </button>
+            <button type="button" style={{ ...styles.button, flex: 1 }} onClick={() => setNewName(null)}>
+              Cancel
+            </button>
+          </div>
         </form>
       )}
       {current?.group === 'Mine' && !inactive && (

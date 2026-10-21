@@ -87,9 +87,10 @@ export default function LowLoadHighPv({ data, assignment, onAssignmentChange }: 
       alignContent: 'start',
     },
     sidebar: {
-      width: '250px',
+      // Scales with the window: 20% of its width, kept between 150px and 320px.
+      width: 'clamp(150px, 20vw, 320px)',
       flexShrink: 0,
-      padding: '20px',
+      padding: 'clamp(10px, 1.5vw, 20px)',
       backgroundColor: '#f9f9f9',
       borderRight: '1px solid #ddd',
       overflowY: 'auto' as const,
