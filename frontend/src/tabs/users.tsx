@@ -87,9 +87,7 @@ export default function Users({ onView }: { onView: (key: string) => void }) {
                     ))}
               </td>
               <td style={styles.td}>
-                {u.protected ? (
-                  <span style={{ color: '#999' }}>In ADMIN_EMAILS</span>
-                ) : (
+                {!u.protected && (
                   <>
                     <button style={styles.button} disabled={toggle.isPending} onClick={() => toggle.mutate(u)}>
                       {u.inactive ? 'Make active' : 'Make inactive'}
