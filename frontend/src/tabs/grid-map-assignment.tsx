@@ -85,6 +85,10 @@ export default function GridMapAssignment({
             <span style={{ fontSize: 13, color: '#333' }}>PV exceeds demand</span>
           </div>
         </div>
+
+        <p style={{ marginTop: '20px', fontSize: 13, color: '#666', lineHeight: 1.4 }}>
+          Click a meter to reassign it, or drag a box to select several.
+        </p>
       </div>
       <div style={styles.mapContainer}>
         <GridMap data={data} scenario={scenario} />

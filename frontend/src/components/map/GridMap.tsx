@@ -61,7 +61,8 @@ export default function GridMap({
     name: 'PV exceeds demand',
     x: exceeding.map((d) => d.x_geo),
     y: exceeding.map((d) => d.y_geo),
-    marker: { symbol: 'circle-open', size: 16, color: PV_EXCEEDS_COLOR, line: { width: 2 } },
+    // Same size as the meter dot so the ring sits on its edge, over the white outline.
+    marker: { symbol: 'circle-open', size: 12, color: PV_EXCEEDS_COLOR, line: { width: 2 } },
     // Skip so hover and clicks fall through to the meter dot underneath.
     hoverinfo: 'skip' as const,
     unselected: { marker: { opacity: 1 } },
@@ -205,38 +206,34 @@ export default function GridMap({
         onDeselect={() => setSelected(new Set())}
         style={{ width: '100%', height: '100%' }}
       />
-      <div
-        style={{
-          position: 'absolute',
-          top: 8,
-          left: 8,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '6px 10px',
-          fontSize: '13px',
-          backgroundColor: 'rgba(255,255,255,0.92)',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-        }}
-      >
-        {selected.size === 0 ? (
-          'Click a meter to reassign it, or drag a box to select several.'
-        ) : (
-          <>
-            <span>{selected.size} selected · click to add/remove</span>
-            <button
-              style={{ ...barBtn, backgroundColor: '#1565C0', color: '#fff', border: 'none' }}
-              onClick={() => setPanelMeters(data.filter((d) => selected.has(d.meter_name)))}
-            >
-              Reassign…
-            </button>
-            <button style={barBtn} onClick={() => setSelected(new Set())}>
-              Clear
-            </button>
-          </>
-        )}
-      </div>
+      {selected.size > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 10px',
+            fontSize: '13px',
+            backgroundColor: 'rgba(255,255,255,0.92)',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+          }}
+        >
+          <span>{selected.size} selected · click to add/remove</span>
+          <button
+            style={{ ...barBtn, backgroundColor: '#1565C0', color: '#fff', border: 'none' }}
+            onClick={() => setPanelMeters(data.filter((d) => selected.has(d.meter_name)))}
+          >
+            Reassign…
+          </button>
+          <button style={barBtn} onClick={() => setSelected(new Set())}>
+            Clear
+          </button>
+        </div>
+      )}
       {panelMeters && (
         <ReassignPanel
           meters={panelMeters}
