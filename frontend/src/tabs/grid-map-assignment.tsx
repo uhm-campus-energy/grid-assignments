@@ -1,7 +1,7 @@
 
 import GridMap from '../components/map/GridMap';
 import { GridAssignment } from '../types/gridAssignment';
-import { BUS_COLORS } from '../components/map/mapConstants';
+import { BUS_COLORS, PV_EXCEEDS_COLOR } from '../components/map/mapConstants';
 import AssignmentSelect from '../components/AssignmentSelect';
 
 interface GridMapAssignmentProps {
@@ -69,6 +69,21 @@ export default function GridMapAssignment({
               <span style={{ fontSize: 13, color: '#333' }}>{bus}</span>
             </div>
           ))}
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: '16px' }}>
+            <span
+              style={{
+                display: 'inline-block',
+                width: 14,
+                height: 14,
+                borderRadius: '50%',
+                border: `2.5px solid ${PV_EXCEEDS_COLOR}`,
+                marginRight: 8,
+                flexShrink: 0,
+                boxSizing: 'border-box',
+              }}
+            />
+            <span style={{ fontSize: 13, color: '#333' }}>PV exceeds demand</span>
+          </div>
         </div>
       </div>
       <div style={styles.mapContainer}>

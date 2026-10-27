@@ -7,7 +7,10 @@ export const BUS_COLORS: Record<string, string> = {
   Null: '#9E9E9E',
 };
 
-export const BUS_OPTIONS = ['MA', 'MB', 'LA', 'LB', 'LC', 'Null'];
+// Ring drawn around meters whose PV exceeds their demand at any time step.
+export const PV_EXCEEDS_COLOR = '#C62828';
+
+export const BUS_OPTIONS =['MA', 'MB', 'LA', 'LB', 'LC', 'Null'];
 
 export const IT_CENTER_X_RANGE = [1.5, 7];
 export const IT_CENTER_Y_RANGE = [8, 12.5];

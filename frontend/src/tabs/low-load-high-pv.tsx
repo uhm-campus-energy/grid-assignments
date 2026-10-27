@@ -209,10 +209,11 @@ export default function LowLoadHighPv({ data, assignment, onAssignmentChange }: 
               ]}
               layout={{
                 title: { text: `Circuit ${sub}`, font: { size: 14 } },
-                xaxis: { title: 'Time', fixedrange: true },
+                // Outside ticks push the "0" and "00:00" labels apart at the corner.
+                xaxis: { title: 'Time', fixedrange: true, ticks: 'outside', ticklen: 6 },
                 // Both series share one fixed scale so PV (kW) reads correctly
                 // below Demand (kW), and all circuits are directly comparable.
-                yaxis: { title: 'kW', range: [0, 3000], fixedrange: true },
+                yaxis: { title: 'kW', range: [0, 3000], fixedrange: true, ticks: 'outside', ticklen: 6 },
                 dragmode: false,
                 autosize: true,
                 margin: { t: 40, r: 20, b: 50, l: 60 },
