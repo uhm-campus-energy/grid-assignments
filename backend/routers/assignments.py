@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from ..auth import current_user, require_active, require_admin
 from ..store import get_scenarios, get_assignments_for_scenario, upsert_assignment
 from . import my_assignments as mine
@@ -10,6 +10,7 @@ router = APIRouter()
 class AssignmentUpdate(BaseModel):
     scenario: str
     substation_meter: str
+    meter_names: list[str] = Field(min_length=1)
 
 
 @router.get("/scenarios")
@@ -48,21 +49,21 @@ def get_grid_assignments(scenario: str = "2026_04_23", user: dict = Depends(curr
     return sorted(result, key=lambda r: r["meter_name"])
 
 
-@router.put("/assignments/{meter_name}")
-def update_assignment(meter_name: str, body: AssignmentUpdate, user: dict = Depends(current_user)):
+@router.put("/assignments")
+def update_assignments(body: AssignmentUpdate, user: dict = Depends(current_user)):
+    """Move one or more meters to the same bus in one assignment, all or nothing."""
     require_active(user)
     if mine.is_personal(body.scenario):
-        updated = mine.save(body.scenario, user, meter_name, body.substation_meter)
+        updated = mine.save(body.scenario, user, body.meter_names, body.substation_meter)
     else:
         require_admin(user)
-        updated = upsert_assignment(meter_name, body.scenario, body.substation_meter)
+        updated = upsert_assignment(body.meter_names, body.scenario, body.substation_meter)
     if updated is None:
         raise HTTPException(status_code=404, detail="Meter/scenario combination not found")
-    return {
-        "meter_name": updated["meter_name"],
-        "scenario": updated["scenario"],
-        "substation_meter": updated["substation_meter"],
-    }
+    return [
+        {"meter_name": u["meter_name"], "scenario": u["scenario"], "substation_meter": u["substation_meter"]}
+        for u in updated
+    ]
 
 
 def _float(val):

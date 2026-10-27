@@ -140,23 +140,29 @@ def get_kw_data(
 
 def apply_upsert(
     rows: list[list[str]],
-    meter_name: str,
+    meter_names: list[str],
     scenario: str,
     substation_meter: str,
-) -> dict | None:
+) -> list[dict] | None:
     """Mutate ``rows`` in place, setting substation_meter on every row matching
-    meter_name + scenario. Returns the updated record, or None if no match."""
-    result = None
-    for row in rows:
-        if len(row) < MIN_COLS:
-            continue
-        if _get(row, "meter_name") == meter_name and _get(row, "assignment") == scenario:
-            row[_C["substation_meter"]] = substation_meter
-            if result is None:
-                result = {
-                    "meter_name": meter_name,
-                    "scenario": scenario,
-                    "substation_meter": substation_meter,
-                    "notes": _get(row, "notes"),
-                }
-    return result
+    one of meter_names + scenario. Returns one record per meter, or None (and
+    changes nothing) if any meter has no row in this scenario."""
+    names = set(meter_names)
+    matches = [
+        row for row in rows
+        if len(row) >= MIN_COLS
+        and _get(row, "assignment") == scenario
+        and _get(row, "meter_name") in names
+    ]
+    if {_get(row, "meter_name") for row in matches} != names:
+        return None
+    result: dict[str, dict] = {}
+    for row in matches:
+        row[_C["substation_meter"]] = substation_meter
+        result.setdefault(_get(row, "meter_name"), {
+            "meter_name": _get(row, "meter_name"),
+            "scenario": scenario,
+            "substation_meter": substation_meter,
+            "notes": _get(row, "notes"),
+        })
+    return list(result.values())

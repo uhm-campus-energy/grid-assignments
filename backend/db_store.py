@@ -135,20 +135,23 @@ def get_kw_data(
 
 
 def upsert_assignment(
-    meter_name: str, scenario: str, substation_meter: str
-) -> dict | None:
+    meter_names: list[str], scenario: str, substation_meter: str
+) -> list[dict] | None:
     """Overwrite substation_meter on the base grid_assignments table.
 
-    Returns the updated row, or None if no meter/scenario row matched (the
-    router turns None into a 404).
+    Returns the updated rows, or None (and changes nothing) if any meter has no
+    row in this scenario (the router turns None into a 404).
     """
     sql = """
         UPDATE analysis.grid_assignments
         SET substation_meter = %s
-        WHERE meter_name = %s AND assignment = %s
+        WHERE meter_name = ANY(%s) AND assignment = %s
         RETURNING meter_name, assignment AS scenario, substation_meter, notes
     """
     with _get_pool().connection() as conn:
-        row = conn.execute(sql, (substation_meter, meter_name, scenario)).fetchone()
+        rows = conn.execute(sql, (substation_meter, meter_names, scenario)).fetchall()
+        if {r["meter_name"] for r in rows} != set(meter_names):
+            conn.rollback()
+            return None
         conn.commit()
-    return row
+    return rows

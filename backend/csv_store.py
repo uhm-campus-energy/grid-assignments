@@ -61,9 +61,10 @@ def get_kw_data(load_scenario: str | None = None, pv_scenario: str | None = None
     return L.get_kw_data(rows, load_scenario, pv_scenario)
 
 
-def upsert_assignment(meter_name: str, scenario: str, substation_meter: str) -> dict | None:
+def upsert_assignment(meter_names: list[str], scenario: str, substation_meter: str) -> list[dict] | None:
     with _lock:
         header, rows = _read_all()
-        result = L.apply_upsert(rows, meter_name, scenario, substation_meter)
-        _write_all(header, rows)
+        result = L.apply_upsert(rows, meter_names, scenario, substation_meter)
+        if result is not None:
+            _write_all(header, rows)
     return result
