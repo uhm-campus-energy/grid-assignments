@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { GridAssignment } from '../../types/gridAssignment';
-import { BUS_OPTIONS } from './mapConstants';
+import { BUS_OPTIONS, PV_EXCEEDS_COLOR } from './mapConstants';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateAssignments } from '../../api/gridMap';
 import { useKwData } from '../../hooks/useKwData';
@@ -11,6 +11,31 @@ const fmtKw = (v: number | null) =>
   v == null ? '—' : `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} kW`;
 
 const busOf = (m: GridAssignment) => m.substation_meter ?? 'Null';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const STEP_MS = 15 * 60 * 1000;
+
+// Parse a raw "2026-1-1 11:45:00" datetime string as UTC ms, so string order
+// ("2026-1-10" < "2026-1-9") and timezones don't matter.
+function parseDt(s: string): number {
+  const [datePart, timePart = ''] = s.split(' ');
+  const [y, m, d] = datePart.split('-').map(Number);
+  const [hh = 0, mm = 0] = timePart.split(':').map(Number);
+  return Date.UTC(y, (m || 1) - 1, d || 1, hh, mm);
+}
+
+const fmtDay = (t: number) => {
+  const d = new Date(t);
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+};
+const fmtTime = (t: number) => new Date(t).toISOString().slice(11, 16);
+
+// "Jan 1, 2026 · 10:15–14:30", or a single time when the run is one step.
+function fmtRun(start: number, end: number): string {
+  if (start === end) return `${fmtDay(start)} · ${fmtTime(start)}`;
+  const sameDay = fmtDay(start) === fmtDay(end);
+  return `${fmtDay(start)} · ${fmtTime(start)}–${sameDay ? '' : `${fmtDay(end)} · `}${fmtTime(end)}`;
+}
 
 interface ReassignPanelProps {
   meters: GridAssignment[];
@@ -49,6 +74,27 @@ export default function ReassignPanel({
     const steps = new Set(inWindow.map((d) => d.datetime_str)).size;
     return inWindow.reduce((s, d) => s + (d.pv_production_kw || 0), 0) / steps;
   }, [kwData, meters]);
+  // For a single meter: the 15-minute steps where its own PV is above its own
+  // demand (the red ring on the map), merged into runs of consecutive steps,
+  // each with its largest surplus.
+  const exportRuns = useMemo(() => {
+    if (many) return [];
+    const steps = kwData
+      .filter((d) => d.meter_name === meter.meter_name && (d.pv_production_kw || 0) > (d.demand_kw || 0))
+      .map((d) => ({ t: parseDt(d.datetime_str), surplus: (d.pv_production_kw || 0) - (d.demand_kw || 0) }))
+      .sort((a, b) => a.t - b.t);
+    const runs: { start: number; end: number; peak: number }[] = [];
+    steps.forEach(({ t, surplus }) => {
+      const last = runs[runs.length - 1];
+      if (last && t - last.end <= STEP_MS) {
+        last.end = t;
+        last.peak = Math.max(last.peak, surplus);
+      } else {
+        runs.push({ start: t, end: t, peak: surplus });
+      }
+    });
+    return runs;
+  }, [kwData, meter, many]);
   const avgDemand = meters.some((m) => m.avg_kw_10_to_2 != null)
     ? meters.reduce((s, m) => s + (m.avg_kw_10_to_2 ?? 0), 0)
     : null;
@@ -186,6 +232,19 @@ export default function ReassignPanel({
             <label style={styles.label}>{total}Avg PV Production (10am–2pm)</label>
             <div style={styles.value}>{kwLoading ? 'Loading…' : fmtKw(avgPv10to2)}</div>
           </div>
+
+          {exportRuns.length > 0 && (
+            <div style={styles.field}>
+              <label style={{ ...styles.label, color: PV_EXCEEDS_COLOR }}>PV exceeds demand</label>
+              <div style={{ maxHeight: '20vh', overflowY: 'auto' }}>
+                {exportRuns.map((r) => (
+                  <div key={r.start} style={styles.value}>
+                    {fmtRun(r.start, r.end)} · peak +{fmtKw(r.peak)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div style={styles.field}>
             <label htmlFor="bus-select" style={styles.label}>
