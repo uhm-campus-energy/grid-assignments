@@ -76,7 +76,7 @@ export default function GridMapAssignment({
                 width: 14,
                 height: 14,
                 borderRadius: '50%',
-                border: `2.5px solid ${PV_EXCEEDS_COLOR}`,
+                border: `2px solid ${PV_EXCEEDS_COLOR}`,
                 marginRight: 8,
                 flexShrink: 0,
                 boxSizing: 'border-box',
