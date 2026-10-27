@@ -29,4 +29,6 @@ documentation.md
 .DS_Store
 .vercel
 data/grid_assignmentsOLD.csv
+
+# Local improvement plan
 plan.md

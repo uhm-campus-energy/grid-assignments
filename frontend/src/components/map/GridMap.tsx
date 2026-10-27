@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
 import { PlotMouseEvent } from 'plotly.js';
 import { GridAssignment } from '../../types/gridAssignment';
-import { BUS_COLORS, BUS_OPTIONS } from './mapConstants';
+import { BUS_COLORS, BUS_OPTIONS, PV_EXCEEDS_COLOR } from './mapConstants';
 import { useKwData } from '../../hooks/useKwData';
 import ReassignPanel from './ReassignPanel';
 
@@ -34,9 +34,12 @@ export default function GridMap({
 
   // Average PV production per meter over the 10:00–14:00 window, to mirror the
   // demand's precomputed avg_kw_10_to_2 (PV has no equivalent precomputed field).
-  const avgPvByMeter = useMemo(() => {
+  // Also collects meters whose PV is above their demand at any 15-minute step.
+  const { avgPvByMeter, pvExceeds } = useMemo(() => {
     const acc: Record<string, { sum: number; count: number }> = {};
+    const exceeds = new Set<string>();
     kwData.forEach((d) => {
+      if ((d.pv_production_kw || 0) > (d.demand_kw || 0)) exceeds.add(d.meter_name);
       const hour = parseInt((d.datetime_str.split(' ')[1] ?? '').slice(0, 2), 10);
       if (hour < 10 || hour >= 14) return;
       if (!acc[d.meter_name]) acc[d.meter_name] = { sum: 0, count: 0 };
@@ -45,8 +48,20 @@ export default function GridMap({
     });
     const map: Record<string, number> = {};
     Object.entries(acc).forEach(([m, { sum, count }]) => { map[m] = count ? sum / count : 0; });
-    return map;
+    return { avgPvByMeter: map, pvExceeds: exceeds };
   }, [kwData]);
+
+  const exceeding = data.filter((d) => pvExceeds.has(d.meter_name));
+  const ringTrace = {
+    type: 'scatter' as const,
+    mode: 'markers' as const,
+    name: 'PV exceeds demand',
+    x: exceeding.map((d) => d.x_geo),
+    y: exceeding.map((d) => d.y_geo),
+    marker: { symbol: 'circle-open', size: 20, color: PV_EXCEEDS_COLOR, line: { width: 2.5 } },
+    // Skip so hover and clicks fall through to the meter dot underneath.
+    hoverinfo: 'skip' as const,
+  };
 
   const traces = BUS_OPTIONS.map((bus) => {
     const subset = data.filter((d) => (d.substation_meter ?? 'Null') === bus);
@@ -79,6 +94,7 @@ export default function GridMap({
         d.circuit,
         fmtKw(d.avg_kw_10_to_2),
         fmtKw(avgPvByMeter[d.meter_name]),
+        pvExceeds.has(d.meter_name) ? '<br><b>PV exceeds demand at some time</b>' : '',
       ]),
       hovertemplate:
         '<b>%{customdata[0]}</b><br>' +
@@ -86,6 +102,7 @@ export default function GridMap({
         'Circuit: %{customdata[2]}<br>' +
         'Avg Demand (10am–2pm): %{customdata[3]}<br>' +
         'Avg PV Production (10am–2pm): %{customdata[4]}' +
+        '%{customdata[5]}' +
         '<extra></extra>',
     };
   });
@@ -141,7 +158,7 @@ export default function GridMap({
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <Plot
-        data={traces}
+        data={[...traces, ringTrace]}
         layout={{
           ...layout,
           width: undefined,
