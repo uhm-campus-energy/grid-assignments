@@ -32,6 +32,12 @@ export async function createMyAssignment(name: string, base: string): Promise<{ 
   return response.data;
 }
 
+// Admins only: deletes a base assignment for everyone.
+export async function deleteBaseAssignment(name: string): Promise<unknown> {
+  const response = await api.delete(`/assignments/${encodeURIComponent(name)}`);
+  return response.data;
+}
+
 export async function deleteMyAssignment(key: string): Promise<unknown> {
   const response = await api.delete(`/my-assignments/${key}`);
   return response.data;

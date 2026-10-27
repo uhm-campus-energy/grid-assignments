@@ -68,3 +68,12 @@ def upsert_assignment(meter_names: list[str], scenario: str, substation_meter: s
         if result is not None:
             _write_all(header, rows)
     return result
+
+
+def delete_assignment(scenario: str) -> bool:
+    with _lock:
+        header, rows = _read_all()
+        kept = L.apply_delete(rows, scenario)
+        if kept is not None:
+            _write_all(header, kept)
+    return kept is not None

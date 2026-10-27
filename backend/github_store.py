@@ -129,26 +129,47 @@ def get_kw_data(load_scenario: str | None = None, pv_scenario: str | None = None
     return L.get_kw_data(rows, load_scenario, pv_scenario)
 
 
-def upsert_assignment(meter_names: list[str], scenario: str, substation_meter: str) -> list[dict] | None:
+def _commit_edit(message: str, edit):
+    """Run ``edit(rows) -> (new_rows, result) | None`` on the branch head and
+    commit the new rows, re-reading and retrying once on a conflict. Returns
+    ``result``, or None (nothing committed) if ``edit`` returned None."""
     global _cache, _cache_sha
-    # One commit for the whole batch. "[skip ci]" keeps a data-only commit from
-    # running the GitHub Actions suite.
-    who = meter_names[0] if len(meter_names) == 1 else f"{len(meter_names)} meters ({', '.join(meter_names)})"
-    message = f"Reassign {who} to {substation_meter} ({scenario}) [skip ci]"
     with _lock:
         for _ in range(2):
             # Re-read from the branch head so the edit lands on the latest data.
             _cache = None
             _cache_sha = None
             header, rows = _read_all()
-            result = L.apply_upsert(rows, meter_names, scenario, substation_meter)
-            if result is None:
+            edited = edit(rows)
+            if edited is None:
                 return None
-            new_sha = _commit(L.serialize_csv(header, rows).encode("utf-8"), _cache_sha, message)
+            new_rows, result = edited
+            new_sha = _commit(L.serialize_csv(header, new_rows).encode("utf-8"), _cache_sha, message)
             if new_sha:
-                _cache = (header, rows)
+                _cache = (header, new_rows)
                 _cache_sha = new_sha
                 return result
         _cache = None
         _cache_sha = None
         raise RuntimeError("GitHub commit kept conflicting with concurrent edits; try again.")
+
+
+def upsert_assignment(meter_names: list[str], scenario: str, substation_meter: str) -> list[dict] | None:
+    # One commit for the whole batch. "[skip ci]" keeps a data-only commit from
+    # running the GitHub Actions suite.
+    who = meter_names[0] if len(meter_names) == 1 else f"{len(meter_names)} meters ({', '.join(meter_names)})"
+    message = f"Reassign {who} to {substation_meter} ({scenario}) [skip ci]"
+
+    def edit(rows):
+        result = L.apply_upsert(rows, meter_names, scenario, substation_meter)
+        return None if result is None else (rows, result)
+
+    return _commit_edit(message, edit)
+
+
+def delete_assignment(scenario: str) -> bool:
+    def edit(rows):
+        kept = L.apply_delete(rows, scenario)
+        return None if kept is None else (kept, True)
+
+    return bool(_commit_edit(f"Delete assignment {scenario} [skip ci]", edit))

@@ -6,7 +6,8 @@ avg kW, time series) still comes from the base assignment in the data store.
 
 The frontend refers to a personal assignment by the key "p:<id>"; base
 assignment names never start with that. Owners can edit and delete their own;
-admins can view everyone's but not change them.
+admins can view everyone's but not change them. A copy outlives its base
+assignment if an admin deletes that.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from psycopg.errors import UniqueViolation
@@ -37,7 +38,7 @@ def list_for(user: dict) -> list[dict]:
     with _connect() as conn:
         rows = conn.execute(
             """
-            SELECT a.id, a.name, a.user_id, u.email
+            SELECT a.id, a.name, a.user_id, u.email, a.base_assignment
             FROM assignments a JOIN users u ON u.id = a.user_id
             WHERE %s OR a.user_id = %s
             ORDER BY u.email, a.name
@@ -50,8 +51,10 @@ def list_for(user: dict) -> list[dict]:
             "label": name if owner == user["id"] else f"{name} ({email})",
             "group": "Mine" if owner == user["id"] else "Others",
             "editable": owner == user["id"] and not user["inactive"],
+            "base": base,
+            "owner": email,
         }
-        for id_, name, owner, email in rows
+        for id_, name, owner, email, base in rows
     ]
 
 
@@ -79,9 +82,14 @@ def records(key: str, user: dict) -> list[dict]:
             "SELECT meter_name, substation_meter FROM assignment_meters WHERE assignment_id = %s",
             (id_,),
         ).fetchall())
+    base_records = get_assignments_for_scenario(base)
+    # An admin may have deleted the base. Everything but the bus is the same in
+    # every base assignment, so borrow it from one that's left.
+    if not base_records and (left := get_scenarios()):
+        base_records = get_assignments_for_scenario(left[0])
     return [
         {**r, "substation_meter": buses.get(r["meter_name"]), "scenario": key, "assignment": key}
-        for r in get_assignments_for_scenario(base)
+        for r in base_records
         if r["meter_name"] in buses
     ]
 

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useScenarios } from '../hooks/useGridData';
-import { createMyAssignment, deleteMyAssignment } from '../api/gridMap';
+import { createMyAssignment, deleteBaseAssignment, deleteMyAssignment } from '../api/gridMap';
 import { useMe } from '../api/auth';
+import { ScenarioOption } from '../types/gridAssignment';
 
 const GROUPS = ['Base', 'Mine', 'Others'] as const;
 
@@ -27,8 +28,19 @@ const styles = {
   error: { color: '#c62828', fontSize: '13px', marginTop: '6px' },
 };
 
+// Base deletes warn about the personal copies made from it (admins see them all).
+function deleteMessage(current: ScenarioOption, options: ScenarioOption[]) {
+  if (current.group !== 'Base') return `Delete "${current.label}"?`;
+  const owners = [...new Set(options.filter((o) => o.base === current.key).map((o) => o.owner))];
+  const question = `Delete base assignment "${current.key}" for everyone?`;
+  if (owners.length === 0) return question;
+  return `${owners.join(', ')} ${owners.length === 1 ? 'has a copy' : 'have copies'} of this assignment. ` +
+    `Their copies will be kept.\n\n${question}`;
+}
+
 // The assignment dropdown shared by both tabs: base assignments, the user's
-// own copies, and (for admins) everyone else's. Also creates and deletes copies.
+// own copies, and (for admins) everyone else's. Creates and deletes copies;
+// admins can also delete base assignments.
 export default function AssignmentSelect({
   value,
   onChange,
@@ -41,6 +53,14 @@ export default function AssignmentSelect({
   const [newName, setNewName] = useState<string | null>(null);
   const current = options.find((o) => o.key === value);
   const inactive = useMe().data?.user?.inactive ?? false;
+  const canDeleteBase = current?.group === 'Base' && current.editable &&
+    options.filter((o) => o.group === 'Base').length > 1;
+
+  // The selected assignment can disappear (deleted, or the hardcoded default
+  // is gone); fall back to the first one rather than showing nothing.
+  useEffect(() => {
+    if (options.length > 0 && !current) onChange(options[0].key);
+  }, [options, current, onChange]);
 
   const create = useMutation({
     mutationFn: () => createMyAssignment(newName ?? '', value),
@@ -52,12 +72,22 @@ export default function AssignmentSelect({
   });
 
   const remove = useMutation({
-    mutationFn: () => deleteMyAssignment(value),
+    mutationFn: () => (current?.group === 'Base' ? deleteBaseAssignment(value) : deleteMyAssignment(value)),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['scenarios'] });
-      onChange(options[0]?.key ?? '');
+      onChange(options.find((o) => o.key !== value)?.key ?? '');
     },
   });
+
+  const deleteButton = current && (
+    <button
+      style={styles.button}
+      disabled={remove.isPending}
+      onClick={() => window.confirm(deleteMessage(current, options)) && remove.mutate()}
+    >
+      Delete
+    </button>
+  );
 
   return (
     <div>
@@ -89,6 +119,7 @@ export default function AssignmentSelect({
           <button style={styles.button} onClick={() => setNewName('')}>
             Make my own copy
           </button>
+          {canDeleteBase && deleteButton}
         </div>
       )}
       {newName !== null && (
@@ -120,17 +151,7 @@ export default function AssignmentSelect({
           </div>
         </form>
       )}
-      {current?.group === 'Mine' && !inactive && (
-        <div style={styles.row}>
-          <button
-            style={styles.button}
-            disabled={remove.isPending}
-            onClick={() => window.confirm(`Delete "${current.label}"?`) && remove.mutate()}
-          >
-            Delete
-          </button>
-        </div>
-      )}
+      {current?.group === 'Mine' && !inactive && <div style={styles.row}>{deleteButton}</div>}
       {create.isError && <div style={styles.error}>{errorText(create.error)}</div>}
       {remove.isError && <div style={styles.error}>{errorText(remove.error)}</div>}
     </div>
