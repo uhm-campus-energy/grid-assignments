@@ -129,17 +129,19 @@ def get_kw_data(load_scenario: str | None = None, pv_scenario: str | None = None
     return L.get_kw_data(rows, load_scenario, pv_scenario)
 
 
-def upsert_assignment(meter_name: str, scenario: str, substation_meter: str) -> dict | None:
+def upsert_assignment(meter_names: list[str], scenario: str, substation_meter: str) -> list[dict] | None:
     global _cache, _cache_sha
-    # "[skip ci]" keeps a data-only commit from running the GitHub Actions suite.
-    message = f"Reassign {meter_name} to {substation_meter} ({scenario}) [skip ci]"
+    # One commit for the whole batch. "[skip ci]" keeps a data-only commit from
+    # running the GitHub Actions suite.
+    who = meter_names[0] if len(meter_names) == 1 else f"{len(meter_names)} meters ({', '.join(meter_names)})"
+    message = f"Reassign {who} to {substation_meter} ({scenario}) [skip ci]"
     with _lock:
         for _ in range(2):
             # Re-read from the branch head so the edit lands on the latest data.
             _cache = None
             _cache_sha = None
             header, rows = _read_all()
-            result = L.apply_upsert(rows, meter_name, scenario, substation_meter)
+            result = L.apply_upsert(rows, meter_names, scenario, substation_meter)
             if result is None:
                 return None
             new_sha = _commit(L.serialize_csv(header, rows).encode("utf-8"), _cache_sha, message)

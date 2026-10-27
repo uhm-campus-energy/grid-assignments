@@ -86,21 +86,25 @@ def records(key: str, user: dict) -> list[dict]:
     ]
 
 
-def save(key: str, user: dict, meter_name: str, substation_meter: str) -> dict | None:
+def save(key: str, user: dict, meter_names: list[str], substation_meter: str) -> list[dict] | None:
+    """Set the bus on several meters at once; None (nothing changed) if any is missing."""
     require_active(user)
     id_, owner, _ = _find(key, user)
     if owner != user["id"]:
         raise HTTPException(status_code=403, detail="Only the owner can change this assignment")
     with _connect() as conn:
-        row = conn.execute(
+        rows = conn.execute(
             """
             UPDATE assignment_meters SET substation_meter = %s
-            WHERE assignment_id = %s AND meter_name = %s
+            WHERE assignment_id = %s AND meter_name = ANY(%s)
             RETURNING meter_name, substation_meter
             """,
-            (substation_meter, id_, meter_name),
-        ).fetchone()
-    return row and {"meter_name": row[0], "scenario": key, "substation_meter": row[1]}
+            (substation_meter, id_, meter_names),
+        ).fetchall()
+        if {m for m, _ in rows} != set(meter_names):
+            conn.rollback()
+            return None
+    return [{"meter_name": m, "scenario": key, "substation_meter": b} for m, b in rows]
 
 
 class NewAssignment(BaseModel):

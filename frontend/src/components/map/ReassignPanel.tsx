@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { GridAssignment } from '../../types/gridAssignment';
 import { BUS_OPTIONS } from './mapConstants';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { updateAssignment } from '../../api/gridMap';
+import { updateAssignments } from '../../api/gridMap';
 import { useKwData } from '../../hooks/useKwData';
 import { useScenarios } from '../../hooks/useGridData';
 import { useMe } from '../../api/auth';
@@ -10,20 +10,25 @@ import { useMe } from '../../api/auth';
 const fmtKw = (v: number | null) =>
   v == null ? '—' : `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} kW`;
 
+const busOf = (m: GridAssignment) => m.substation_meter ?? 'Null';
+
 interface ReassignPanelProps {
-  meter: GridAssignment;
+  meters: GridAssignment[];
   scenario: string;
   onClose: () => void;
   onReassign: (newBus: string) => void;
 }
 
 export default function ReassignPanel({
-  meter,
+  meters,
   scenario,
   onClose,
   onReassign,
 }: ReassignPanelProps) {
-  const [selected, setSelected] = useState<string>(meter.substation_meter ?? 'Null');
+  const meter = meters[0];
+  const many = meters.length > 1;
+  const [selected, setSelected] = useState<string>(busOf(meter));
+  const unchanged = meters.every((m) => busOf(m) === selected);
   const queryClient = useQueryClient();
   const { data: kwData = [], isLoading: kwLoading } = useKwData();
   const current = useScenarios().data?.find((o) => o.key === scenario);
@@ -31,20 +36,27 @@ export default function ReassignPanel({
   const inactive = useMe().data?.user?.inactive ?? false;
 
   // PV has no precomputed 10am–2pm average (only demand's avg_kw_10_to_2 exists),
-  // so derive it from this meter's time series over the same 10:00–14:00 window.
+  // so derive it from the meters' time series over the same 10:00–14:00 window,
+  // summed across the meters.
   const avgPv10to2 = useMemo(() => {
+    const names = new Set(meters.map((m) => m.meter_name));
     const inWindow = kwData.filter((d) => {
-      if (d.meter_name !== meter.meter_name) return false;
+      if (!names.has(d.meter_name)) return false;
       const hour = parseInt((d.datetime_str.split(' ')[1] ?? '').slice(0, 2), 10);
       return hour >= 10 && hour < 14;
     });
     if (inWindow.length === 0) return null;
-    return inWindow.reduce((s, d) => s + (d.pv_production_kw || 0), 0) / inWindow.length;
-  }, [kwData, meter.meter_name]);
+    const steps = new Set(inWindow.map((d) => d.datetime_str)).size;
+    return inWindow.reduce((s, d) => s + (d.pv_production_kw || 0), 0) / steps;
+  }, [kwData, meters]);
+  const avgDemand = meters.some((m) => m.avg_kw_10_to_2 != null)
+    ? meters.reduce((s, m) => s + (m.avg_kw_10_to_2 ?? 0), 0)
+    : null;
+  const total = many ? 'Total ' : '';
 
   const mutation = useMutation({
     mutationFn: (bus: string) =>
-      updateAssignment(meter.meter_name, scenario, bus),
+      updateAssignments(meters.map((m) => m.meter_name), scenario, bus),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['grid-assignments'] });
       onReassign(selected);
@@ -136,26 +148,42 @@ export default function ReassignPanel({
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.drawer} onClick={(e) => e.stopPropagation()}>
         <div>
-          <div style={styles.header}>
-            <h2 style={styles.title}>{meter.meter_name}</h2>
-            <div style={styles.field}>
-              <span style={styles.label}>Circuit</span>
-              <div style={styles.value}>{meter.circuit}</div>
+          {many ? (
+            <div style={styles.header}>
+              <h2 style={styles.title}>{meters.length} meters</h2>
+              <span style={styles.label}>Meter · current substation meter</span>
+              <div style={{ maxHeight: '30vh', overflowY: 'auto' }}>
+                {meters.map((m) => (
+                  <div key={m.meter_name} style={styles.value}>
+                    {m.meter_name} · {busOf(m)}
+                  </div>
+                ))}
+              </div>
             </div>
+          ) : (
+            <>
+              <div style={styles.header}>
+                <h2 style={styles.title}>{meter.meter_name}</h2>
+                <div style={styles.field}>
+                  <span style={styles.label}>Circuit</span>
+                  <div style={styles.value}>{meter.circuit}</div>
+                </div>
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Current Substation Meter</label>
+                <div style={styles.value}>{busOf(meter)}</div>
+              </div>
+            </>
+          )}
+
+          <div style={styles.field}>
+            <label style={styles.label}>{total}Avg Demand (10am–2pm)</label>
+            <div style={styles.value}>{fmtKw(avgDemand)}</div>
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Current Substation Meter</label>
-            <div style={styles.value}>{meter.substation_meter ?? 'Null'}</div>
-          </div>
-
-          <div style={styles.field}>
-            <label style={styles.label}>Avg Demand (10am–2pm)</label>
-            <div style={styles.value}>{fmtKw(meter.avg_kw_10_to_2)}</div>
-          </div>
-
-          <div style={styles.field}>
-            <label style={styles.label}>Avg PV Production (10am–2pm)</label>
+            <label style={styles.label}>{total}Avg PV Production (10am–2pm)</label>
             <div style={styles.value}>{kwLoading ? 'Loading…' : fmtKw(avgPv10to2)}</div>
           </div>
 
@@ -191,11 +219,11 @@ export default function ReassignPanel({
         <div style={styles.footer}>
           <button
             onClick={() => mutation.mutate(selected)}
-            disabled={mutation.isPending || !editable}
+            disabled={mutation.isPending || !editable || unchanged}
             style={{
               ...styles.button,
               ...styles.primaryBtn,
-              opacity: mutation.isPending || !editable ? 0.6 : 1,
+              opacity: mutation.isPending || !editable || unchanged ? 0.6 : 1,
             }}
           >
             {mutation.isPending ? 'Saving...' : 'Save'}

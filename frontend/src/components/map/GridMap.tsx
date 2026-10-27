@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
-import { PlotMouseEvent } from 'plotly.js';
+import { PlotMouseEvent, PlotSelectionEvent } from 'plotly.js';
 import { GridAssignment } from '../../types/gridAssignment';
 import { BUS_COLORS, BUS_OPTIONS, PV_EXCEEDS_COLOR } from './mapConstants';
 import { useKwData } from '../../hooks/useKwData';
@@ -29,7 +29,10 @@ export default function GridMap({
   xRange = [IMG_X0, IMG_X1],
   yRange = [IMG_Y0, IMG_Y1],
 }: GridMapProps) {
-  const [selectedMeter, setSelectedMeter] = useState<GridAssignment | null>(null);
+  // Meters picked for a bulk reassign (box-drag adds, click toggles), and the
+  // meters the reassign panel is open for.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [panelMeters, setPanelMeters] = useState<GridAssignment[] | null>(null);
   const { data: kwData = [] } = useKwData();
 
   // Average PV production per meter over the 10:00–14:00 window, to mirror the
@@ -61,6 +64,7 @@ export default function GridMap({
     marker: { symbol: 'circle-open', size: 16, color: PV_EXCEEDS_COLOR, line: { width: 2 } },
     // Skip so hover and clicks fall through to the meter dot underneath.
     hoverinfo: 'skip' as const,
+    unselected: { marker: { opacity: 1 } },
   };
 
   const traces = BUS_OPTIONS.map((bus) => {
@@ -88,6 +92,10 @@ export default function GridMap({
       text: showLabels ? subset.map((d) => d.node) : undefined,
       textposition: (showLabels ? 'top center' : undefined) as 'top center' | undefined,
       textfont: { size: 9, color: '#000' },
+      // Driven from state so the dimming survives re-renders; undefined = no selection.
+      selectedpoints: selected.size
+        ? subset.flatMap((d, i) => (selected.has(d.meter_name) ? [i] : []))
+        : undefined,
       customdata: subset.map((d) => [
         d.meter_name,
         d.substation_meter,
@@ -123,7 +131,7 @@ export default function GridMap({
       zeroline: false,
     },
     hovermode: 'closest' as const,
-    dragmode: false as const,
+    dragmode: 'select' as const,
     showlegend: false,
     margin: { l: 0, r: 0, t: 0, b: 0 },
     images: [
@@ -144,15 +152,40 @@ export default function GridMap({
     ],
   };
 
+  // Meter name of a clicked/selected point; undefined for the ring trace.
+  const nameOf = (p: { customdata?: unknown }) => (p.customdata as string[] | undefined)?.[0];
+
+  // No selection: a click opens the panel for that meter. With a selection, a
+  // click adds or removes the meter instead.
   const handlePlotClick = (event: Readonly<PlotMouseEvent>) => {
-    if (event.points && event.points.length > 0) {
-      const point = event.points[0];
-      const meterName = (point.customdata as unknown as string[])[0];
-      const meter = data.find((d) => d.meter_name === meterName);
-      if (meter) {
-        setSelectedMeter(meter);
-      }
+    const name = event.points?.[0] && nameOf(event.points[0]);
+    if (!name) return;
+    if (selected.size === 0) {
+      const meter = data.find((d) => d.meter_name === name);
+      if (meter) setPanelMeters([meter]);
+      return;
     }
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(name)) next.add(name);
+      return next;
+    });
+  };
+
+  // Each box-drag adds to the selection; double-click (onDeselect) clears it.
+  const handleSelected = (event?: Readonly<PlotSelectionEvent>) => {
+    const names = (event?.points ?? []).map(nameOf).filter((n): n is string => !!n);
+    if (names.length) setSelected((prev) => new Set([...prev, ...names]));
+  };
+
+  const barBtn = {
+    padding: '4px 10px',
+    fontSize: '13px',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    backgroundColor: '#fff',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
   };
 
   return (
@@ -168,14 +201,51 @@ export default function GridMap({
         config={{ displayModeBar: false, scrollZoom: false, responsive: true }}
         useResizeHandler={true}
         onClick={handlePlotClick}
+        onSelected={handleSelected}
+        onDeselect={() => setSelected(new Set())}
         style={{ width: '100%', height: '100%' }}
       />
-      {selectedMeter && (
+      <div
+        style={{
+          position: 'absolute',
+          top: 8,
+          left: 8,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '6px 10px',
+          fontSize: '13px',
+          backgroundColor: 'rgba(255,255,255,0.92)',
+          border: '1px solid #ddd',
+          borderRadius: '4px',
+        }}
+      >
+        {selected.size === 0 ? (
+          'Click a meter to reassign it, or drag a box to select several.'
+        ) : (
+          <>
+            <span>{selected.size} selected · click to add/remove</span>
+            <button
+              style={{ ...barBtn, backgroundColor: '#1565C0', color: '#fff', border: 'none' }}
+              onClick={() => setPanelMeters(data.filter((d) => selected.has(d.meter_name)))}
+            >
+              Reassign…
+            </button>
+            <button style={barBtn} onClick={() => setSelected(new Set())}>
+              Clear
+            </button>
+          </>
+        )}
+      </div>
+      {panelMeters && (
         <ReassignPanel
-          meter={selectedMeter}
+          meters={panelMeters}
           scenario={scenario}
-          onClose={() => setSelectedMeter(null)}
-          onReassign={() => setSelectedMeter(null)}
+          onClose={() => setPanelMeters(null)}
+          onReassign={() => {
+            setPanelMeters(null);
+            setSelected(new Set());
+          }}
         />
       )}
     </div>

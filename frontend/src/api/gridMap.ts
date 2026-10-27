@@ -13,12 +13,14 @@ export async function fetchGridAssignments(scenario: string): Promise<GridAssign
   return response.data;
 }
 
-export async function updateAssignment(
-  meterName: string,
+// Moves every meter in meterNames to the same bus; all or nothing.
+export async function updateAssignments(
+  meterNames: string[],
   scenario: string,
   substationMeter: string
 ): Promise<unknown> {
-  const response = await api.put(`/assignments/${meterName}`, {
+  const response = await api.put('/assignments', {
+    meter_names: meterNames,
     scenario,
     substation_meter: substationMeter,
   });
