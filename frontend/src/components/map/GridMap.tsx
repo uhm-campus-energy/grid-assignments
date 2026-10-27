@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
 import { PlotMouseEvent, PlotSelectionEvent } from 'plotly.js';
 import { GridAssignment } from '../../types/gridAssignment';
-import { BUS_COLORS, BUS_OPTIONS, PV_EXCEEDS_COLOR } from './mapConstants';
+import { BUS_COLORS, BUS_OPTIONS, PV_EXCEEDS_COLOR, SUBSTATIONS } from './mapConstants';
 import { useKwData } from '../../hooks/useKwData';
 import ReassignPanel from './ReassignPanel';
 
@@ -66,6 +66,27 @@ export default function GridMap({
     // Skip so hover and clicks fall through to the meter dot underneath.
     hoverinfo: 'skip' as const,
     unselected: { marker: { opacity: 1 } },
+  };
+
+  // Labelled squares for the substations. No customdata, so clicks and
+  // box-drags ignore them (nameOf returns undefined).
+  const substationTrace = {
+    type: 'scatter' as const,
+    mode: 'text+markers' as const,
+    name: 'Substations',
+    x: SUBSTATIONS.map((s) => s.x),
+    y: SUBSTATIONS.map((s) => s.y),
+    text: SUBSTATIONS.map((s) => s.name),
+    textposition: 'middle center' as const,
+    textfont: { size: 10, color: '#fff', family: 'Arial Black, sans-serif' },
+    marker: {
+      symbol: 'square',
+      size: 26,
+      color: SUBSTATIONS.map((s) => BUS_COLORS[s.name] ?? BUS_COLORS.Null),
+      line: { color: '#333', width: 1.5 },
+    },
+    hoverinfo: 'skip' as const,
+    unselected: { marker: { opacity: 1 }, textfont: { color: '#fff' } },
   };
 
   const traces = BUS_OPTIONS.map((bus) => {
@@ -192,7 +213,7 @@ export default function GridMap({
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <Plot
-        data={[...traces, ringTrace]}
+        data={[...traces, ringTrace, substationTrace]}
         layout={{
           ...layout,
           width: undefined,
