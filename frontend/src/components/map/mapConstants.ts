@@ -4,7 +4,7 @@ export const BUS_COLORS: Record<string, string> = {
   // Brown-orange: dark so the yellow PV-exceeds ring stands out, and well
   // apart from LB's bright red.
   LA: '#8B4513',
-  LB: '#F44336',
+  LB: '#D50000',
   LC: '#9C27B0',
   Null: '#9E9E9E',
 };
