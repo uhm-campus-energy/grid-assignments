@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
 import { PlotMouseEvent, PlotSelectionEvent } from 'plotly.js';
 import { GridAssignment } from '../../types/gridAssignment';
-import { BUS_COLORS, BUS_OPTIONS, PV_EXCEEDS_COLOR, SUBSTATIONS } from './mapConstants';
+import { BUS_COLORS, BUS_OPTIONS, PV_EXCEEDS_COLOR, PV_EXCEEDS_INNER_COLOR, SUBSTATIONS } from './mapConstants';
 import { useKwData } from '../../hooks/useKwData';
 import ReassignPanel from './ReassignPanel';
 
@@ -55,18 +55,20 @@ export default function GridMap({
   }, [kwData]);
 
   const exceeding = data.filter((d) => pvExceeds.has(d.meter_name));
-  const ringTrace = {
+  const ring = (size: number, color: string) => ({
     type: 'scatter' as const,
     mode: 'markers' as const,
     name: 'PV exceeds demand',
     x: exceeding.map((d) => d.x_geo),
     y: exceeding.map((d) => d.y_geo),
-    // Same size as the meter dot so the ring sits on its edge, over the white outline.
-    marker: { symbol: 'circle-open', size: 12, color: PV_EXCEEDS_COLOR, line: { width: 2 } },
+    marker: { symbol: 'circle-open', size, color, line: { width: 2 } },
     // Skip so hover and clicks fall through to the meter dot underneath.
     hoverinfo: 'skip' as const,
     unselected: { marker: { opacity: 1 } },
-  };
+  });
+  // Inner ring is the dot's size so it sits on its edge, over the white outline;
+  // the outer ring is 4px wider so the two touch without overlapping.
+  const ringTraces = [ring(12, PV_EXCEEDS_INNER_COLOR), ring(16, PV_EXCEEDS_COLOR)];
 
   // Labelled squares for the substations. No customdata, so clicks and
   // box-drags ignore them (nameOf returns undefined).
@@ -213,7 +215,7 @@ export default function GridMap({
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <Plot
-        data={[...traces, ringTrace, substationTrace]}
+        data={[...traces, ...ringTraces, substationTrace]}
         layout={{
           ...layout,
           width: undefined,

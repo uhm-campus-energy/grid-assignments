@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { GridAssignment } from '../../types/gridAssignment';
-import { BUS_OPTIONS, PV_EXCEEDS_COLOR } from './mapConstants';
+import { BUS_OPTIONS } from './mapConstants';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateAssignments } from '../../api/gridMap';
 import { useKwData } from '../../hooks/useKwData';
@@ -235,7 +235,7 @@ export default function ReassignPanel({
 
           {exportRuns.length > 0 && (
             <div style={styles.field}>
-              <label style={{ ...styles.label, color: PV_EXCEEDS_COLOR }}>PV exceeds demand</label>
+              <label style={styles.label}>PV exceeds demand</label>
               <div style={{ maxHeight: '20vh', overflowY: 'auto' }}>
                 {exportRuns.map((r) => (
                   <div key={r.start} style={styles.value}>

@@ -7,8 +7,10 @@ export const BUS_COLORS: Record<string, string> = {
   Null: '#9E9E9E',
 };
 
-// Ring drawn around meters whose PV exceeds their demand at any time step.
-export const PV_EXCEEDS_COLOR = '#C62828';
+// Rings drawn around meters whose PV exceeds their demand at any time step:
+// a black ring on the dot's edge with a yellow ring just outside it.
+export const PV_EXCEEDS_COLOR = '#FFD600';
+export const PV_EXCEEDS_INNER_COLOR = '#000';
 
 export const BUS_OPTIONS =['MA', 'MB', 'LA', 'LB', 'LC', 'Null'];
 

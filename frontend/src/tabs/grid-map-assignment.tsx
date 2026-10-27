@@ -1,7 +1,7 @@
 
 import GridMap from '../components/map/GridMap';
 import { GridAssignment } from '../types/gridAssignment';
-import { BUS_COLORS, PV_EXCEEDS_COLOR } from '../components/map/mapConstants';
+import { BUS_COLORS, PV_EXCEEDS_COLOR, PV_EXCEEDS_INNER_COLOR } from '../components/map/mapConstants';
 import AssignmentSelect from '../components/AssignmentSelect';
 
 interface GridMapAssignmentProps {
@@ -77,6 +77,7 @@ export default function GridMapAssignment({
                 height: 14,
                 borderRadius: '50%',
                 border: `2px solid ${PV_EXCEEDS_COLOR}`,
+                boxShadow: `inset 0 0 0 2px ${PV_EXCEEDS_INNER_COLOR}`,
                 marginRight: 8,
                 flexShrink: 0,
                 boxSizing: 'border-box',
