@@ -58,7 +58,7 @@ export default function GridMap({
     name: 'PV exceeds demand',
     x: exceeding.map((d) => d.x_geo),
     y: exceeding.map((d) => d.y_geo),
-    marker: { symbol: 'circle-open', size: 20, color: PV_EXCEEDS_COLOR, line: { width: 2.5 } },
+    marker: { symbol: 'circle-open', size: 16, color: PV_EXCEEDS_COLOR, line: { width: 2 } },
     // Skip so hover and clicks fall through to the meter dot underneath.
     hoverinfo: 'skip' as const,
   };
