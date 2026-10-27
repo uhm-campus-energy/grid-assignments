@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from ..auth import current_user, require_active, require_admin
-from ..store import get_scenarios, get_assignments_for_scenario, upsert_assignment
+from ..store import delete_assignment, get_scenarios, get_assignments_for_scenario, upsert_assignment
 from . import my_assignments as mine
 
 router = APIRouter()
@@ -64,6 +64,21 @@ def update_assignments(body: AssignmentUpdate, user: dict = Depends(current_user
         {"meter_name": u["meter_name"], "scenario": u["scenario"], "substation_meter": u["substation_meter"]}
         for u in updated
     ]
+
+
+@router.delete("/assignments/{scenario}")
+def delete_base_assignment(scenario: str, user: dict = Depends(current_user)):
+    """Admins delete a base assignment for everyone. Personal copies made from
+    it are kept (see my_assignments.records)."""
+    require_active(user)
+    require_admin(user)
+    scenarios = get_scenarios()
+    if scenario not in scenarios:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    if len(scenarios) == 1:
+        raise HTTPException(status_code=400, detail="Can't delete the last base assignment")
+    delete_assignment(scenario)
+    return {"ok": True}
 
 
 def _float(val):

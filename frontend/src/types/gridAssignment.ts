@@ -21,6 +21,9 @@ export interface ScenarioOption {
   label: string;
   group: 'Base' | 'Mine' | 'Others';
   editable: boolean;
+  // Personal copies only: the base assignment it was copied from, and its owner's email.
+  base?: string;
+  owner?: string;
 }
 
 export type BusType = 'MA' | 'MB' | 'LA' | 'LB' | 'LC' | 'Null';

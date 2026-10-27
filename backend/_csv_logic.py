@@ -166,3 +166,11 @@ def apply_upsert(
             "notes": _get(row, "notes"),
         })
     return list(result.values())
+
+
+def apply_delete(rows: list[list[str]], scenario: str) -> list[list[str]] | None:
+    """The rows without this assignment's, or None if it has no rows. Every
+    assignment repeats the same time series, so no kW data is lost as long as
+    another assignment is left."""
+    kept = [row for row in rows if _get(row, "assignment") != scenario]
+    return None if len(kept) == len(rows) else kept

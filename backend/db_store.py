@@ -155,3 +155,12 @@ def upsert_assignment(
             return None
         conn.commit()
     return rows
+
+
+def delete_assignment(scenario: str) -> bool:
+    """Delete every row of one assignment from the base table (needs DELETE on
+    it). False if the assignment had no rows."""
+    with _get_pool().connection() as conn:
+        cur = conn.execute("DELETE FROM analysis.grid_assignments WHERE assignment = %s", (scenario,))
+        conn.commit()
+    return cur.rowcount > 0

@@ -20,6 +20,7 @@ BACKEND = os.getenv("DATA_BACKEND", "csv").lower()
 
 if BACKEND == "db":
     from .db_store import (  # noqa: F401
+        delete_assignment,
         get_assignments_for_scenario,
         get_kw_data,
         get_meter_names,
@@ -28,6 +29,7 @@ if BACKEND == "db":
     )
 elif BACKEND == "github":
     from .github_store import (  # noqa: F401
+        delete_assignment,
         get_assignments_for_scenario,
         get_kw_data,
         get_meter_names,
@@ -36,6 +38,7 @@ elif BACKEND == "github":
     )
 else:
     from .csv_store import (  # noqa: F401
+        delete_assignment,
         get_assignments_for_scenario,
         get_kw_data,
         get_meter_names,
@@ -45,6 +48,7 @@ else:
 
 __all__ = [
     "BACKEND",
+    "delete_assignment",
     "get_assignments_for_scenario",
     "get_kw_data",
     "get_meter_names",
