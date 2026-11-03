@@ -29,6 +29,17 @@ test('low load / high pv tab renders charts', async ({ page }) => {
   await expect(page.locator('.js-plotly-plot').first()).toBeVisible({ timeout: 20_000 });
 });
 
+test('each circuit chart has a PV vs demand summary line', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Low Load, High PV' }).click();
+  await expect(page.getByText(/PV (exceeds demand \d|stays below demand)/).first()).toBeVisible({ timeout: 20_000 });
+});
+
+test('map legend shows a backflow status per bus', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText(/^(OK|PV > demand)$/).first()).toBeVisible({ timeout: 20_000 });
+});
+
 test('health endpoint is reachable', async ({ request }) => {
   const health = await request.get('/api/health');
   expect(health.ok()).toBeTruthy();

@@ -1,8 +1,10 @@
-
+import { useMemo } from 'react';
 import GridMap from '../components/map/GridMap';
 import { GridAssignment } from '../types/gridAssignment';
 import { BUS_COLORS, PV_EXCEEDS_COLOR, PV_EXCEEDS_INNER_COLOR } from '../components/map/mapConstants';
 import AssignmentSelect from '../components/AssignmentSelect';
+import { useKwData } from '../hooks/useKwData';
+import { busOf, peakSurplus, sumByBus } from '../utils/busTotals';
 
 interface GridMapAssignmentProps {
   data: GridAssignment[];
@@ -15,6 +17,20 @@ export default function GridMapAssignment({
   scenario,
   onScenarioChange,
 }: GridMapAssignmentProps) {
+  const { data: kwData = [] } = useKwData();
+
+  // Per bus: how many meters, and whether the bus total has PV above demand
+  // at any step (null while the time series loads, or for Null).
+  const buses = useMemo(() => {
+    const busByMeter: Record<string, string> = {};
+    data.forEach((d) => { busByMeter[d.meter_name] = busOf(d); });
+    const totals = sumByBus(kwData, busByMeter);
+    return [...new Set(data.map(busOf))].sort().map((bus) => {
+      const peak = bus !== 'Null' && totals[bus] ? peakSurplus(totals[bus]) : null;
+      return { bus, count: data.filter((d) => busOf(d) === bus).length, exports: peak == null ? null : peak > 0 };
+    });
+  }, [data, kwData]);
+
   const styles = {
     container: {
       display: 'flex',
@@ -52,7 +68,7 @@ export default function GridMapAssignment({
 
         <div>
           <div style={styles.sidebarTitle}>Substation Meter</div>
-          {[...new Set(data.map((d) => d.substation_meter ?? 'Null'))].sort().map((bus) => (
+          {buses.map(({ bus, count, exports }) => (
             <div key={bus} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
               <span
                 style={{
@@ -67,6 +83,25 @@ export default function GridMapAssignment({
                 }}
               />
               <span style={{ fontSize: 13, color: '#333' }}>{bus}</span>
+              <span style={{ fontSize: 12, color: '#888', marginLeft: 6 }}>({count})</span>
+              {exports != null && (
+                <span
+                  title={exports ? 'Bus total PV exceeds demand at some time' : 'Bus total PV stays below demand'}
+                  style={{
+                    marginLeft: 'auto',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: '1px 6px',
+                    borderRadius: 8,
+                    whiteSpace: 'nowrap',
+                    ...(exports
+                      ? { backgroundColor: PV_EXCEEDS_COLOR, color: '#000' }
+                      : { backgroundColor: '#E8F5E9', color: '#2E7D32' }),
+                  }}
+                >
+                  {exports ? 'PV > demand' : 'OK'}
+                </span>
+              )}
             </div>
           ))}
           <div style={{ display: 'flex', alignItems: 'center', marginTop: '16px' }}>

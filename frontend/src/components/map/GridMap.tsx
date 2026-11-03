@@ -260,6 +260,7 @@ export default function GridMap({
       {panelMeters && (
         <ReassignPanel
           meters={panelMeters}
+          allMeters={data}
           scenario={scenario}
           onClose={() => setPanelMeters(null)}
           onReassign={() => {

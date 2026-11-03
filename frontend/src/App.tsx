@@ -14,7 +14,13 @@ const ADMIN_TAB_NAMES = [...TAB_NAMES, 'Users'];
 export default function App() {
   const { data: me, isLoading } = useMe();
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#999' }}>
+        Loading...
+      </div>
+    );
+  }
   if (!me?.user) return <LoginScreen clientId={me?.google_client_id ?? null} />;
   return <SignedInApp user={me.user} />;
 }
@@ -39,14 +45,14 @@ function SignedInApp({ user }: { user: User }) {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: '16px',
+      padding: '8px 16px',
       backgroundColor: '#1565C0',
       color: '#fff',
       boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
     },
     title: {
       margin: 0,
-      fontSize: '36px',
+      fontSize: '22px',
       fontWeight: 'bold' as const,
     },
     tabBar: {
@@ -56,11 +62,11 @@ function SignedInApp({ user }: { user: User }) {
       backgroundColor: '#fafafa',
     },
     tab: {
-      padding: '12px 16px',
+      padding: '8px 16px',
       border: 'none',
       backgroundColor: 'transparent',
       cursor: 'pointer',
-      fontSize: '24px',
+      fontSize: '16px',
       whiteSpace: 'nowrap' as const,
       fontFamily: 'inherit',
     },

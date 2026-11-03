@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GridAssignment } from '../../types/gridAssignment';
 import { BUS_OPTIONS } from './mapConstants';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -6,39 +6,18 @@ import { updateAssignments } from '../../api/gridMap';
 import { useKwData } from '../../hooks/useKwData';
 import { useScenarios } from '../../hooks/useGridData';
 import { useMe } from '../../api/auth';
+import { busOf, exceedRuns, fmtRun, peakSurplus, sumByBus } from '../../utils/busTotals';
 
 const fmtKw = (v: number | null) =>
   v == null ? '—' : `${v.toLocaleString('en-US', { maximumFractionDigits: 1 })} kW`;
 
-const busOf = (m: GridAssignment) => m.substation_meter ?? 'Null';
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const STEP_MS = 15 * 60 * 1000;
-
-// Parse a raw "2026-1-1 11:45:00" datetime string as UTC ms, so string order
-// ("2026-1-10" < "2026-1-9") and timezones don't matter.
-function parseDt(s: string): number {
-  const [datePart, timePart = ''] = s.split(' ');
-  const [y, m, d] = datePart.split('-').map(Number);
-  const [hh = 0, mm = 0] = timePart.split(':').map(Number);
-  return Date.UTC(y, (m || 1) - 1, d || 1, hh, mm);
-}
-
-const fmtDay = (t: number) => {
-  const d = new Date(t);
-  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
-};
-const fmtTime = (t: number) => new Date(t).toISOString().slice(11, 16);
-
-// "Jan 1, 2026 · 10:15–14:30", or a single time when the run is one step.
-function fmtRun(start: number, end: number): string {
-  if (start === end) return `${fmtDay(start)} · ${fmtTime(start)}`;
-  const sameDay = fmtDay(start) === fmtDay(end);
-  return `${fmtDay(start)} · ${fmtTime(start)}–${sameDay ? '' : `${fmtDay(end)} · `}${fmtTime(end)}`;
-}
+const fmtSigned = (v: number | null) =>
+  v == null ? 'no meters' : `${v > 0 ? '+' : ''}${Math.round(v).toLocaleString('en-US')} kW`;
 
 interface ReassignPanelProps {
   meters: GridAssignment[];
+  // Every meter in the assignment, for the before/after bus totals.
+  allMeters: GridAssignment[];
   scenario: string;
   onClose: () => void;
   onReassign: (newBus: string) => void;
@@ -46,6 +25,7 @@ interface ReassignPanelProps {
 
 export default function ReassignPanel({
   meters,
+  allMeters,
   scenario,
   onClose,
   onReassign,
@@ -59,6 +39,12 @@ export default function ReassignPanel({
   const current = useScenarios().data?.find((o) => o.key === scenario);
   const editable = current?.editable ?? false;
   const inactive = useMe().data?.user?.inactive ?? false;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   // PV has no precomputed 10am–2pm average (only demand's avg_kw_10_to_2 exists),
   // so derive it from the meters' time series over the same 10:00–14:00 window,
@@ -74,27 +60,34 @@ export default function ReassignPanel({
     const steps = new Set(inWindow.map((d) => d.datetime_str)).size;
     return inWindow.reduce((s, d) => s + (d.pv_production_kw || 0), 0) / steps;
   }, [kwData, meters]);
-  // For a single meter: the 15-minute steps where its own PV is above its own
-  // demand (the red ring on the map), merged into runs of consecutive steps,
-  // each with its largest surplus.
+  // For a single meter: when its own PV is above its own demand (the ring on
+  // the map), as runs of consecutive steps.
   const exportRuns = useMemo(() => {
     if (many) return [];
-    const steps = kwData
-      .filter((d) => d.meter_name === meter.meter_name && (d.pv_production_kw || 0) > (d.demand_kw || 0))
-      .map((d) => ({ t: parseDt(d.datetime_str), surplus: (d.pv_production_kw || 0) - (d.demand_kw || 0) }))
-      .sort((a, b) => a.t - b.t);
-    const runs: { start: number; end: number; peak: number }[] = [];
-    steps.forEach(({ t, surplus }) => {
-      const last = runs[runs.length - 1];
-      if (last && t - last.end <= STEP_MS) {
-        last.end = t;
-        last.peak = Math.max(last.peak, surplus);
-      } else {
-        runs.push({ start: t, end: t, peak: surplus });
-      }
-    });
-    return runs;
+    const own = sumByBus(kwData, { [meter.meter_name]: 'self' }).self;
+    return own ? exceedRuns(own) : [];
   }, [kwData, meter, many]);
+
+  // Preview: each bus this save touches, with its peak PV − demand before and
+  // after the move. Above 0 means the bus total exports at some step.
+  const preview = useMemo(() => {
+    if (unchanged || kwData.length === 0) return [];
+    const moving = new Set(meters.map((m) => m.meter_name));
+    const before: Record<string, string> = {};
+    const after: Record<string, string> = {};
+    allMeters.forEach((m) => {
+      before[m.meter_name] = busOf(m);
+      after[m.meter_name] = moving.has(m.meter_name) ? selected : busOf(m);
+    });
+    const sumBefore = sumByBus(kwData, before);
+    const sumAfter = sumByBus(kwData, after);
+    const buses = [...new Set([...meters.map(busOf), selected])].filter((b) => b !== 'Null').sort();
+    return buses.map((bus) => ({
+      bus,
+      before: sumBefore[bus] ? peakSurplus(sumBefore[bus]) : null,
+      after: sumAfter[bus] ? peakSurplus(sumAfter[bus]) : null,
+    }));
+  }, [unchanged, kwData, meters, allMeters, selected]);
   const avgDemand = meters.some((m) => m.avg_kw_10_to_2 != null)
     ? meters.reduce((s, m) => s + (m.avg_kw_10_to_2 ?? 0), 0)
     : null;
@@ -263,6 +256,22 @@ export default function ReassignPanel({
               ))}
             </select>
           </div>
+
+          {preview.length > 0 && (
+            <div style={styles.field}>
+              <label style={styles.label}>Peak PV − demand, before → after</label>
+              {preview.map((p) => (
+                <div
+                  key={p.bus}
+                  style={{ ...styles.value, fontWeight: (p.after ?? 0) > 0 ? 600 : 'normal' }}
+                >
+                  {p.bus}: {fmtSigned(p.before)} → {fmtSigned(p.after)}
+                  {(p.after ?? 0) > 0 && (p.before ?? 0) <= 0 && ' · now exports'}
+                  {(p.after ?? 0) <= 0 && (p.before ?? 0) > 0 && ' · no longer exports'}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {current && !editable && (
