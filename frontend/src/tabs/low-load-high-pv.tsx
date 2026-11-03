@@ -118,7 +118,6 @@ export default function LowLoadHighPv({ data, assignment, onAssignmentChange }: 
       verticalAlign: 'middle' as const,
       flexShrink: 0,
     },
-    note: { marginTop: '16px', fontSize: '12px', color: '#666', lineHeight: 1.5 },
   };
 
   if (isLoading) {
@@ -147,29 +146,6 @@ export default function LowLoadHighPv({ data, assignment, onAssignmentChange }: 
             <span style={{ ...styles.legendSwatch, backgroundColor: '#ED7D31', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,0.15)' }} />
             <span style={{ fontSize: 13, color: '#333' }}>PV Production kW</span>
           </div>
-        </div>
-
-        <div style={styles.note}>
-          <p style={{ margin: '0 0 8px' }}>
-            Building loads were taken from meters for the low load day of 1/1/2026 (for IT Center, which is
-            no longer communicating, 1/1/25 was used).
-          </p>
-          <p style={{ margin: '0 0 8px' }}>
-            High PV production was taken from 5/14/22 for Parking Structure Phase 2, and that data was used to
-            estimate the production of the Parking Structure Phase 1 array, since we did not have data from
-            when it was fully operational.
-          </p>
-          <p style={{ margin: '0 0 8px' }}>
-            Other PV arrays are reflected in the building loads. For example, Gartley exports at some point
-            during the day and its kW will be negative. Frog 1 and Frog 2 do the same.
-          </p>
-          Missing or broken meters not included in the analysis (we have no access to their data):
-          <ul style={{ margin: '4px 0 0', paddingLeft: '18px' }}>
-            <li>Campus Center AC</li>
-            <li>Law School AC</li>
-            <li>Law School Clinic</li>
-            <li>Edmonson Hall</li>
-          </ul>
         </div>
       </div>
 

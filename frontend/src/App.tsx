@@ -6,8 +6,9 @@ import { useGridData } from './hooks/useGridData';
 import GridMapAssignment from './tabs/grid-map-assignment';
 import LowLoadHighPv from './tabs/low-load-high-pv';
 import Users from './tabs/users';
+import AboutData from './tabs/about-data';
 
-const TAB_NAMES = ['Grid Map Assignment', 'Low Load, High PV'];
+const TAB_NAMES = ['Grid Map Assignment', 'Low Load, High PV', 'About the Data'];
 const ADMIN_TAB_NAMES = [...TAB_NAMES, 'Users'];
 
 export default function App() {
@@ -86,7 +87,8 @@ function SignedInApp({ user }: { user: User }) {
   };
 
   const renderTab = () => {
-    if (activeTab === 2) {
+    if (activeTab === 2) return <AboutData />;
+    if (activeTab === 3) {
       return (
         <Users
           onView={(key) => {

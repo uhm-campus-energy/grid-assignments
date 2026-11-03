@@ -5,6 +5,13 @@ test('app loads with header and both tabs', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Grid Assignments' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Grid Map Assignment' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Low Load, High PV' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'About the Data' })).toBeVisible();
+});
+
+test('about the data tab shows the data notes', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'About the Data' }).click();
+  await expect(page.getByText('Missing or broken meters')).toBeVisible();
 });
 
 test('grid map tab shows scenario selector populated from the API', async ({ page }) => {
