@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import GridMap from '../components/map/GridMap';
 import { GridAssignment } from '../types/gridAssignment';
 import { BUS_COLORS, PV_EXCEEDS_COLOR, PV_EXCEEDS_INNER_COLOR } from '../components/map/mapConstants';
@@ -18,6 +18,24 @@ export default function GridMapAssignment({
   onScenarioChange,
 }: GridMapAssignmentProps) {
   const { data: kwData = [] } = useKwData();
+  // Meter search: the text typed, and the meter it last matched. A new object
+  // per match so picking the same meter again reopens its panel.
+  const [query, setQuery] = useState('');
+  const [found, setFound] = useState<{ name: string } | null>(null);
+
+  // An exact name (typed, or picked from the suggestions) opens that meter;
+  // Enter opens the first meter whose name contains the text.
+  const search = (text: string, enter = false) => {
+    const q = text.trim().toLowerCase();
+    const match = data.find((d) => d.meter_name.toLowerCase() === q) ??
+      (enter && q ? data.find((d) => d.meter_name.toLowerCase().includes(q)) : undefined);
+    if (match) {
+      setQuery(match.meter_name);
+      setFound({ name: match.meter_name });
+    } else if (!q) {
+      setFound(null);
+    }
+  };
 
   // Per bus: how many meters, and whether the bus total has PV above demand
   // at any step (null while the time series loads, or for Null).
@@ -53,6 +71,15 @@ export default function GridMapAssignment({
       color: '#666',
       marginBottom: '12px',
     },
+    input: {
+      width: '100%',
+      boxSizing: 'border-box' as const,
+      padding: '8px',
+      fontSize: '14px',
+      border: '1px solid #ddd',
+      borderRadius: '4px',
+      fontFamily: 'inherit',
+    },
     mapContainer: {
       flex: 1,
     },
@@ -64,6 +91,30 @@ export default function GridMapAssignment({
         <div style={{ marginBottom: '20px' }}>
           <label style={styles.sidebarTitle}>Assignment</label>
           <AssignmentSelect value={scenario} onChange={onScenarioChange} />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label htmlFor="meter-search" style={styles.sidebarTitle}>Find meter</label>
+          <input
+            id="meter-search"
+            // Not type="search": that clears on Esc, which here closes the panel.
+            type="text"
+            list="meter-names"
+            placeholder="Meter name"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              search(e.target.value);
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && search(query, true)}
+            style={styles.input}
+          />
+          <datalist id="meter-names">
+            {data.map((d) => <option key={d.meter_name} value={d.meter_name} />)}
+          </datalist>
+          {found && data.find((d) => d.meter_name === found.name)?.x_geo == null && (
+            <div style={{ marginTop: 6, fontSize: 12, color: '#888' }}>Not on the map (no position in the data).</div>
+          )}
         </div>
 
         <div>
@@ -127,7 +178,7 @@ export default function GridMapAssignment({
         </p>
       </div>
       <div style={styles.mapContainer}>
-        <GridMap data={data} scenario={scenario} />
+        <GridMap data={data} scenario={scenario} found={found} />
       </div>
     </div>
   );

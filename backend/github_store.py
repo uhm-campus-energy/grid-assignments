@@ -154,11 +154,18 @@ def _commit_edit(message: str, edit):
         raise RuntimeError("GitHub commit kept conflicting with concurrent edits; try again.")
 
 
-def upsert_assignment(meter_names: list[str], scenario: str, substation_meter: str) -> list[dict] | None:
+def _by(email: str | None) -> str:
+    """Commit-message suffix naming who saved, e.g. ' by a@hawaii.edu'."""
+    return f" by {email}" if email else ""
+
+
+def upsert_assignment(
+    meter_names: list[str], scenario: str, substation_meter: str, by: str | None = None
+) -> list[dict] | None:
     # One commit for the whole batch. "[skip ci]" keeps a data-only commit from
     # running the GitHub Actions suite.
-    who = meter_names[0] if len(meter_names) == 1 else f"{len(meter_names)} meters ({', '.join(meter_names)})"
-    message = f"Reassign {who} to {substation_meter} ({scenario}) [skip ci]"
+    which = meter_names[0] if len(meter_names) == 1 else f"{len(meter_names)} meters ({', '.join(meter_names)})"
+    message = f"Reassign {which} to {substation_meter} ({scenario}){_by(by)} [skip ci]"
 
     def edit(rows):
         result = L.apply_upsert(rows, meter_names, scenario, substation_meter)
@@ -167,9 +174,9 @@ def upsert_assignment(meter_names: list[str], scenario: str, substation_meter: s
     return _commit_edit(message, edit)
 
 
-def delete_assignment(scenario: str) -> bool:
+def delete_assignment(scenario: str, by: str | None = None) -> bool:
     def edit(rows):
         kept = L.apply_delete(rows, scenario)
         return None if kept is None else (kept, True)
 
-    return bool(_commit_edit(f"Delete assignment {scenario} [skip ci]", edit))
+    return bool(_commit_edit(f"Delete assignment {scenario}{_by(by)} [skip ci]", edit))

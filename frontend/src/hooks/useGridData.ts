@@ -14,6 +14,8 @@ export function useGridData(scenario: string) {
     queryKey: ['grid-assignments', scenario],
     queryFn: () => fetchGridAssignments(scenario),
     staleTime: Infinity,
+    // "" until the app has picked an assignment.
+    enabled: !!scenario,
   });
 }
 

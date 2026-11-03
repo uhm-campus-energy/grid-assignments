@@ -1,15 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMe, logout, User } from './api/auth';
 import LoginScreen from './components/LoginScreen';
-import { useGridData } from './hooks/useGridData';
+import { useGridData, useScenarios } from './hooks/useGridData';
 import GridMapAssignment from './tabs/grid-map-assignment';
 import LowLoadHighPv from './tabs/low-load-high-pv';
+import Compare from './tabs/compare';
 import Users from './tabs/users';
 import AboutData from './tabs/about-data';
 
-const TAB_NAMES = ['Grid Map Assignment', 'Low Load, High PV', 'About the Data'];
-const ADMIN_TAB_NAMES = [...TAB_NAMES, 'Users'];
+// `slug` is the tab's name in the URL (?tab=pv).
+const TABS = [
+  { slug: 'map', name: 'Grid Map Assignment' },
+  { slug: 'pv', name: 'Low Load, High PV' },
+  { slug: 'compare', name: 'Compare' },
+  { slug: 'about', name: 'About the Data' },
+  { slug: 'users', name: 'Users', admin: true },
+];
 
 export default function App() {
   const { data: me, isLoading } = useMe();
@@ -27,9 +34,29 @@ export default function App() {
 
 function SignedInApp({ user }: { user: User }) {
   const queryClient = useQueryClient();
-  const tabNames = user.role === 'admin' ? ADMIN_TAB_NAMES : TAB_NAMES;
-  const [activeTab, setActiveTab] = useState(0);
-  const [scenario, setScenario] = useState('2026_04_11');
+  const tabs = TABS.filter((t) => !t.admin || user.role === 'admin');
+  // Tab and assignment start from the URL (?tab=pv&scenario=2026_04_11) and
+  // are written back to it, so a refresh or a shared link opens the same view.
+  const [activeTab, setActiveTab] = useState(() => {
+    const slug = new URLSearchParams(window.location.search).get('tab');
+    return tabs.find((t) => t.slug === slug)?.slug ?? 'map';
+  });
+  const [scenario, setScenario] = useState(
+    () => new URLSearchParams(window.location.search).get('scenario') ?? ''
+  );
+  const { data: options } = useScenarios();
+
+  // No assignment in the URL, or it's gone (deleted, or not this user's to
+  // see): fall back to the first one.
+  useEffect(() => {
+    if (options?.length && !options.some((o) => o.key === scenario)) setScenario(options[0].key);
+  }, [options, scenario]);
+
+  useEffect(() => {
+    const params = new URLSearchParams({ tab: activeTab });
+    if (scenario) params.set('scenario', scenario);
+    window.history.replaceState(null, '', `?${params}`);
+  }, [activeTab, scenario]);
 
   const { data: gridData = [], isLoading: dataLoading } = useGridData(scenario);
 
@@ -93,23 +120,23 @@ function SignedInApp({ user }: { user: User }) {
   };
 
   const renderTab = () => {
-    if (activeTab === 2) return <AboutData />;
-    if (activeTab === 3) {
+    if (activeTab === 'about') return <AboutData />;
+    if (activeTab === 'users') {
       return (
         <Users
           onView={(key) => {
             setScenario(key);
-            setActiveTab(0);
+            setActiveTab('map');
           }}
         />
       );
     }
-    if (dataLoading) {
+    if (dataLoading || !scenario) {
       return <div style={styles.loading}>Loading...</div>;
     }
 
     switch (activeTab) {
-      case 0:
+      case 'map':
         return (
           <GridMapAssignment
             data={gridData}
@@ -117,7 +144,7 @@ function SignedInApp({ user }: { user: User }) {
             onScenarioChange={setScenario}
           />
         );
-      case 1:
+      case 'pv':
         return (
           <LowLoadHighPv
             data={gridData}
@@ -125,6 +152,8 @@ function SignedInApp({ user }: { user: User }) {
             onAssignmentChange={setScenario}
           />
         );
+      case 'compare':
+        return <Compare data={gridData} scenario={scenario} onScenarioChange={setScenario} />;
       default:
         return null;
     }
@@ -141,13 +170,13 @@ function SignedInApp({ user }: { user: User }) {
       </div>
 
       <div style={styles.tabBar}>
-        {tabNames.map((name, idx) => (
+        {tabs.map(({ slug, name }) => (
           <button
-            key={idx}
-            onClick={() => setActiveTab(idx)}
+            key={slug}
+            onClick={() => setActiveTab(slug)}
             style={{
               ...styles.tab,
-              ...(activeTab === idx ? styles.activeTab : styles.inactiveTab),
+              ...(activeTab === slug ? styles.activeTab : styles.inactiveTab),
             }}
           >
             {name}

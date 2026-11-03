@@ -44,3 +44,23 @@ test('health endpoint is reachable', async ({ request }) => {
   const health = await request.get('/api/health');
   expect(health.ok()).toBeTruthy();
 });
+
+test('meter search opens that meter', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Find meter').fill('hper_main');
+  await expect(page.getByRole('heading', { name: 'hper_main' })).toBeVisible();
+});
+
+test('tab and assignment are kept in the URL', async ({ page }) => {
+  await page.goto('/?tab=pv&scenario=2026_08_04');
+  await expect(page.getByText('Measure Names')).toBeVisible();
+  await expect(page.locator('select').first()).toHaveValue('2026_08_04');
+  await page.getByRole('button', { name: 'Grid Map Assignment' }).click();
+  await expect(page).toHaveURL(/\?tab=map&scenario=2026_08_04$/);
+});
+
+test('compare tab lists the meters on a different bus', async ({ page }) => {
+  await page.goto('/?tab=compare&scenario=2026_04_11');
+  await expect(page.getByText(/^Meters on a different bus \(\d+\)$/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByLabel('Compare with')).toHaveValue('2026_04_23');
+});

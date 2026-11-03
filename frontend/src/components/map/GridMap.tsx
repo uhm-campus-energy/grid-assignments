@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
 import { PlotMouseEvent, PlotSelectionEvent } from 'plotly.js';
 import { GridAssignment } from '../../types/gridAssignment';
@@ -15,6 +15,8 @@ const fmtKw = (v: number | null | undefined) =>
 interface GridMapProps {
   data: GridAssignment[];
   scenario: string;
+  // The meter picked in the search box: circled on the map, and its panel opens.
+  found?: { name: string } | null;
   showLabels?: boolean;
   sizeBy?: string;
   xRange?: [number, number];
@@ -24,6 +26,7 @@ interface GridMapProps {
 export default function GridMap({
   data,
   scenario,
+  found,
   showLabels = false,
   sizeBy,
   xRange = [IMG_X0, IMG_X1],
@@ -34,6 +37,13 @@ export default function GridMap({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [panelMeters, setPanelMeters] = useState<GridAssignment[] | null>(null);
   const { data: kwData = [] } = useKwData();
+
+  // Only on a new search match, not when data reloads after a save.
+  useEffect(() => {
+    const meter = found && data.find((d) => d.meter_name === found.name);
+    if (meter) setPanelMeters([meter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [found]);
 
   // Average PV production per meter over the 10:00–14:00 window, to mirror the
   // demand's precomputed avg_kw_10_to_2 (PV has no equivalent precomputed field).
@@ -69,6 +79,19 @@ export default function GridMap({
   // Inner ring is the dot's size so it sits on its edge, over the white outline;
   // the outer ring is 4px wider so the two touch without overlapping.
   const ringTraces = [ring(12, PV_EXCEEDS_INNER_COLOR), ring(16, PV_EXCEEDS_COLOR)];
+
+  // A wide blue circle around the searched-for meter, outside the PV rings.
+  const foundMeter = found && data.find((d) => d.meter_name === found.name);
+  const foundTrace = {
+    type: 'scatter' as const,
+    mode: 'markers' as const,
+    name: 'Found',
+    x: foundMeter ? [foundMeter.x_geo] : [],
+    y: foundMeter ? [foundMeter.y_geo] : [],
+    marker: { symbol: 'circle-open', size: 30, color: '#1565C0', line: { width: 3 } },
+    hoverinfo: 'skip' as const,
+    unselected: { marker: { opacity: 1 } },
+  };
 
   // Labelled squares for the substations. No customdata, so clicks and
   // box-drags ignore them (nameOf returns undefined).
@@ -215,7 +238,7 @@ export default function GridMap({
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <Plot
-        data={[...traces, ...ringTraces, substationTrace]}
+        data={[...traces, ...ringTraces, foundTrace, substationTrace]}
         layout={{
           ...layout,
           width: undefined,

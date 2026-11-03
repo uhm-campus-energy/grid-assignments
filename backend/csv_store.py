@@ -61,7 +61,10 @@ def get_kw_data(load_scenario: str | None = None, pv_scenario: str | None = None
     return L.get_kw_data(rows, load_scenario, pv_scenario)
 
 
-def upsert_assignment(meter_names: list[str], scenario: str, substation_meter: str) -> list[dict] | None:
+def upsert_assignment(
+    meter_names: list[str], scenario: str, substation_meter: str, by: str | None = None
+) -> list[dict] | None:
+    # `by` (who saved) is only recorded by the github store's commit messages.
     with _lock:
         header, rows = _read_all()
         result = L.apply_upsert(rows, meter_names, scenario, substation_meter)
@@ -70,7 +73,7 @@ def upsert_assignment(meter_names: list[str], scenario: str, substation_meter: s
     return result
 
 
-def delete_assignment(scenario: str) -> bool:
+def delete_assignment(scenario: str, by: str | None = None) -> bool:
     with _lock:
         header, rows = _read_all()
         kept = L.apply_delete(rows, scenario)

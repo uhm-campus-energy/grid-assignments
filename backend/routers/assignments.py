@@ -57,7 +57,7 @@ def update_assignments(body: AssignmentUpdate, user: dict = Depends(current_user
         updated = mine.save(body.scenario, user, body.meter_names, body.substation_meter)
     else:
         require_admin(user)
-        updated = upsert_assignment(body.meter_names, body.scenario, body.substation_meter)
+        updated = upsert_assignment(body.meter_names, body.scenario, body.substation_meter, by=user["email"])
     if updated is None:
         raise HTTPException(status_code=404, detail="Meter/scenario combination not found")
     return [
@@ -77,7 +77,7 @@ def delete_base_assignment(scenario: str, user: dict = Depends(current_user)):
         raise HTTPException(status_code=404, detail="Assignment not found")
     if len(scenarios) == 1:
         raise HTTPException(status_code=400, detail="Can't delete the last base assignment")
-    delete_assignment(scenario)
+    delete_assignment(scenario, by=user["email"])
     return {"ok": True}
 
 

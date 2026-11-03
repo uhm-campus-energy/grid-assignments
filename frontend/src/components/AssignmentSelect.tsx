@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useScenarios } from '../hooks/useGridData';
@@ -38,6 +38,28 @@ function deleteMessage(current: ScenarioOption, options: ScenarioOption[]) {
     `Their copies will be kept.\n\n${question}`;
 }
 
+// The dropdown's entries, grouped Base / Mine / Others.
+export function AssignmentOptions({ options }: { options: ScenarioOption[] }) {
+  return (
+    <>
+      {GROUPS.map((group) => {
+        const items = options.filter((o) => o.group === group);
+        return (
+          items.length > 0 && (
+            <optgroup key={group} label={group}>
+              {items.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.label}
+                </option>
+              ))}
+            </optgroup>
+          )
+        );
+      })}
+    </>
+  );
+}
+
 // The assignment dropdown shared by both tabs: base assignments, the user's
 // own copies, and (for admins) everyone else's. Creates and deletes copies;
 // admins can also delete base assignments.
@@ -55,12 +77,6 @@ export default function AssignmentSelect({
   const inactive = useMe().data?.user?.inactive ?? false;
   const canDeleteBase = current?.group === 'Base' && current.editable &&
     options.filter((o) => o.group === 'Base').length > 1;
-
-  // The selected assignment can disappear (deleted, or the hardcoded default
-  // is gone); fall back to the first one rather than showing nothing.
-  useEffect(() => {
-    if (options.length > 0 && !current) onChange(options[0].key);
-  }, [options, current, onChange]);
 
   const create = useMutation({
     mutationFn: () => createMyAssignment(newName ?? '', value),
@@ -97,20 +113,7 @@ export default function AssignmentSelect({
         style={styles.select}
         title={current?.label}
       >
-        {GROUPS.map((group) => {
-          const items = options.filter((o) => o.group === group);
-          return (
-            items.length > 0 && (
-              <optgroup key={group} label={group}>
-                {items.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {o.label}
-                  </option>
-                ))}
-              </optgroup>
-            )
-          );
-        })}
+        <AssignmentOptions options={options} />
       </select>
       {current && current.group !== 'Base' && <div className="scroll-x" style={styles.fullName}>{current.label}</div>}
 
